@@ -1,0 +1,2 @@
+hts_fvxx_multi_large_file_hts2.cpp
+207s–Ú	command[0] << "hts_beta_ali_v2_hts2.exe " << filepath << "\\beta_thick_0.dat ali.json --stage_type 2 --th_angle2 0.04 --th_pos2 0.030";//2024/01/19
