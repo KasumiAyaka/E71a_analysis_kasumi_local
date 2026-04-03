@@ -111,6 +111,7 @@ void clustering_2trk_vtx2_ver2(std::multimap<int, stop_track>& tracks, int pl, s
 void clustering_2trk_vtx2_ver3(std::multimap<int, stop_track>& tracks, int pl, std::ofstream& ofs, std::multiset<tkey>& ve);
 void clustering_2trk_vtx2_ver4(std::multimap<int, stop_track>& tracks, int pl, std::ofstream& ofs, std::map<tkey, VE_flg>& ve3flg);
 void read_stop_txt_mode2(std::vector<Momentum_recon::Event_information>& momch, std::multimap<int, stop_track>& tracks, double manflg);
+void read_muon_mc_txt(std::vector<Momentum_recon::Event_information>& momch, std::multimap<int, stop_track>& tracks);
 
 
 int main(int argc, char** argv) {
@@ -131,18 +132,27 @@ int main(int argc, char** argv) {
 
 	//read momch
 	std::vector<Momentum_recon::Event_information> momch = Momentum_recon::Read_Event_information_extension(in_momch);
-	std::cout << "Finish reading momch." << std::endl;
+	std::cout << "Finish reading momch. (" << momch.size() << ")" << std::endl;
 
 	// reading stop.txt
+	std::cout << "Set tracks" << std::endl;
 	std::multimap<int, stop_track> stop;
 	if (mode == 0) {
+		std::cout << "Use all chain to calcurate vertex" << std::endl;
 		read_stop_txt(momch, stop);// use all chain(no cut)
 	}
 	else if (mode == 1) {
+		std::cout << "Use only manualy remaind partners which remain after manual check to calcurate vertex" << std::endl;
 		read_stop_txt_mode2(momch, stop, -5);// man chk[-10](cut manualcheck erased chain)
 	}
 	else if (mode == 2) {
+		std::cout << "Use only real partners to calcurate vertex" << std::endl;
 		read_stop_txt_mode2(momch, stop, -1);// man chk & fin chk[-5](cut manual check erased chain and mom-rng cut)
+	}
+	else if (mode == -1) {
+		// MC
+		std::cout << "MC : Neutrino interaction(recon)" << std::endl;
+		read_muon_mc_txt(momch, stop);// use all chain(no cut)
 	}
 	else {
 		//
@@ -156,6 +166,7 @@ int main(int argc, char** argv) {
 	std::set<int> set;
 	for (auto itr = stop.begin(); itr != stop.end(); itr++) {
 		set.insert(itr->first);
+		//std::cout << "\t" << itr->first << std::endl;
 	}
 	std::cout << "\t #of event : " << set.size() << std::endl;
 
@@ -174,21 +185,24 @@ int main(int argc, char** argv) {
 		veflg.insert(std::make_pair(vfg.k, vfg));
 	}
 	//std::cout << velist_txt  << std::endl;
+	std::cout << "\t #of velist : " << veflg.size() << std::endl;
 
 	ofs.open(file_out_vtx);
 	ofs << "stopflg 0:penetrate/sideout, 2:ecc stop, VEflg 0:remain,  >0:erase(#of matched basetrk)" << std::endl;
 
 	for (auto ev = set.begin(); ev != set.end(); ev++) {
 		auto tks = stop.equal_range(*ev);
-		//printf("event %5d, vtx search\n", *ev);
+		printf("event %5d, TrackNum = ", *ev);
 		std::multimap<int, stop_track> rid;
 		for (auto itr0 = tks.first; itr0 != tks.second; itr0++) {
-			rid.insert(std::make_pair(itr0->second.rawid, itr0->second));
+			rid.insert(std::make_pair(itr0->second.chainid, itr0->second));
 		}
+		//std::cout << rid.size() << std::endl;
 		//clustering_2trk_vtx2_ver3(rid, rid.begin()->second.stoppl, ofs, ve);
 		clustering_2trk_vtx2_ver4(rid, rid.begin()->second.stoppl, ofs, veflg);
 		rid.clear();
 	}
+	std::cout << " Fin." << std::endl;
 
 }
 void read_stop_txt(std::vector<Momentum_recon::Event_information>& momch, std::multimap<int, stop_track>& tracks) {
@@ -654,7 +668,7 @@ void clustering_2trk_vtx2_ver3(std::multimap<int, stop_track>& tracks, int pl, s
 void clustering_2trk_vtx2_ver4(std::multimap<int, stop_track>& tracks, int pl, std::ofstream& ofs, std::map<tkey, VE_flg>& ve3flg) {
 	double refz = 0; int utime;
 	for (auto itr1 = tracks.begin(); itr1 != tracks.end(); itr1++) {
-		if (itr1->second.chainid == 0) {
+		if (itr1->second.pid == 13) {
 			refz = itr1->second.z;
 			utime = itr1->second.unixtime;
 		}
@@ -676,7 +690,7 @@ void clustering_2trk_vtx2_ver4(std::multimap<int, stop_track>& tracks, int pl, s
 	track_multi multi;
 	multi.pl = pl;
 	//‘S2trk‚ÌmdŒvŽZ
-	//std::cout << tracks.size() << std::endl;
+	std::cout << tracks.size() << std::endl;
 	if (tracks.size() != 1) {
 		for (auto itr1 = tracks.begin(); itr1 != tracks.end(); itr1++) {
 			multi.eventid = itr1->second.groupid;
@@ -889,5 +903,135 @@ void clustering_2trk_vtx2_ver4(std::multimap<int, stop_track>& tracks, int pl, s
 		ofs << std::endl;
 	}
 
+}
+
+void read_muon_mc_txt(std::vector<Momentum_recon::Event_information>& momch, std::multimap<int, stop_track>& tracks) {
+	stop_track stop_tmp;
+
+	int pos = 0;
+	int cnt = 0;
+	int use = 0;
+	double ax, ay, angle, dax, day, dal, dar, dl, dr, dx, dy;
+	for (auto& ev : momch) {
+		stop_tmp.stoppl = ev.vertex_pl % 1000;
+		stop_tmp.groupid = ev.groupid;
+		stop_tmp.unixtime = 10;
+
+		//for (auto& c : ev.true_chains) {}
+		for (auto& c : ev.chains) {
+			cnt++;
+
+
+			//if (int(stop_tmp.pid%10000) != 13)continue;
+
+			//std::cout << stop_tmp.groupid << " " << c.chainid << std::endl;
+			if (c.base.size() == 1)continue;
+			stop_tmp.chainid = c.chainid;
+			stop_tmp.nseg = c.base.size();
+			stop_tmp.pl0 = c.base.begin()->pl;//dounstream
+			stop_tmp.pl1 = c.base.rbegin()->pl;//upstream
+			stop_tmp.npl = stop_tmp.pl1 - stop_tmp.pl0 + 1;
+			stop_tmp.pid = int(c.particle_flg % 10000);
+			stop_tmp.mom = c.ecc_mcs_mom[0];
+			stop_tmp.rng = c.ecc_range_mom[0];
+			stop_tmp.stop_flg = c.stop_flg;
+			if (c.particle_flg == 2212) {
+				stop_tmp.mom = c.ecc_mcs_mom[1];
+				stop_tmp.rng = c.ecc_range_mom[1];
+			}
+			stop_tmp.pb = c.Get_proton_mcs_pb();
+
+			if (stop_tmp.pl1 <= stop_tmp.stoppl) {//fwd
+				//stop
+				pos = stop_tmp.pl1;
+				stop_tmp.rawid = c.base.rbegin()->rawid;
+				stop_tmp.ax = c.base.rbegin()->ax;
+				stop_tmp.ay = c.base.rbegin()->ay;
+				stop_tmp.x = c.base.rbegin()->x;
+				stop_tmp.y = c.base.rbegin()->y;
+				stop_tmp.z = c.base.rbegin()->z;
+				stop_tmp.vph = c.base.rbegin()->m[0].ph % 10000 + c.base.rbegin()->m[1].ph % 10000;
+				stop_tmp.vph2 = std::next(c.base.rbegin(), 1)->m[0].ph % 10000 + std::next(c.base.rbegin(), 1)->m[1].ph % 10000;
+
+				std::cout << c.base_pair.size() << std::endl;
+				if (c.base_pair.size() != 0) {
+					auto itr = c.base_pair.rbegin();
+					ax = itr->first.ax;
+					ay = itr->first.ay;
+					angle = sqrt(ax * ax + ay * ay);
+					dax = itr->second.ax - ax;
+					day = itr->second.ay - ay;
+					dx = itr->second.x - itr->first.x;
+					dy = itr->second.y - itr->second.y;
+
+					if (angle < 0.01) {
+						dal = dax;
+					}
+					else {
+						dal = (dax * ay - day * ax) / angle;
+					}
+					if (angle < 0.01) {
+						dar = day;
+					}
+					else {
+						dar = (dax * ax + day * ay) / angle;
+					}
+					stop_tmp.dal = dal;
+					stop_tmp.dl = (dx * ay - dy * ax) / angle;
+					stop_tmp.dar = dar;
+					stop_tmp.dr = (dx * ax + dy * ay) / angle;
+					stop_tmp.d_pl = itr->second.pl - itr->first.pl;
+					std::cout << " Angle diff : " << dal << ", " << dar << std::endl;
+				}
+
+			}
+			if (stop_tmp.pl0 > stop_tmp.stoppl) {//bwd
+				//start
+				stop_tmp.rawid = c.base.begin()->rawid;
+				stop_tmp.ax = c.base.begin()->ax;
+				stop_tmp.ay = c.base.begin()->ay;
+				stop_tmp.x = c.base.begin()->x;
+				stop_tmp.y = c.base.begin()->y;
+				stop_tmp.z = c.base.begin()->z;
+				stop_tmp.vph = c.base.begin()->m[0].ph % 10000 + c.base.begin()->m[1].ph % 10000;
+				stop_tmp.vph2 = std::next(c.base.begin(), 1)->m[0].ph % 10000 + std::next(c.base.begin(), 1)->m[1].ph % 10000;
+				if (c.base_pair.size() != 0) {
+					auto itr = c.base_pair.begin();
+					ax = itr->first.ax;
+					ay = itr->first.ay;
+					angle = sqrt(ax * ax + ay * ay);
+					dax = itr->second.ax - ax;
+					day = itr->second.ay - ay;
+
+					if (angle < 0.01) {
+						dal = dax;
+					}
+					else {
+						dal = (dax * ay - day * ax) / angle;
+					}
+					if (angle < 0.01) {
+						dar = day;
+					}
+					else {
+						dar = (dax * ax + day * ay) / angle;
+					}
+					stop_tmp.dal = dal;
+					stop_tmp.dl = (dx * ay - dy * ax) / angle;
+					stop_tmp.dar = dar;
+					stop_tmp.dr = (dx * ax + dy * ay) / angle;
+					stop_tmp.d_pl = itr->second.pl - itr->first.pl;
+				}
+			}
+
+			stop_tmp.ip = 0;
+			use++;
+			tracks.insert(std::make_pair(stop_tmp.groupid, stop_tmp));
+		}
+		//std::cout << use << " / " << cnt << std::endl;
+
+	}
+
+
+	printf("\t* input fin.\n\t #of track : %d --> %d\n", cnt, use);
 
 }
