@@ -355,17 +355,30 @@ void read_muon_mc_txt(std::vector<Momentum_recon::Event_information>& momch, std
 				stop_tmp.mom = c.ecc_mcs_mom[0];
 				stop_tmp.rng = c.ecc_range_mom[0];
 				stop_tmp.stop_flg = c.stop_flg;
-				if (c.particle_flg == 2212) {
+				if (stop_tmp.pid != 13) {
+					stop_tmp.stop_flg = 2;// ECC stop
+				}
+
+				if (stop_tmp.pid == 2212) {
 					stop_tmp.mom = c.ecc_mcs_mom[1];
 					stop_tmp.rng = c.ecc_range_mom[1];
 				}
-				stop_tmp.pb = c.Get_proton_mcs_pb();
+				stop_tmp.pb = c.Get_muon_mcs_pb();
 				stop_tmp.vph = c.base.begin()->m[0].imager % 10000 + c.base.begin()->m[1].imager % 10000;
 				//for (auto& b : c.base) {
 				//	std::cout << "\tVPH " << b.m[0].ph<<","<<b.m[0].view << "," << b.m[0].zone << "," << b.m[0].pixelnum << "," << b.m[0].imager << "," << b.m[0].hitnum<< ", " << b.m[1].ph << std::endl;
 				//}
 				if (stop_tmp.pl1 <= stop_tmp.stoppl) {//fwd
-					//stop
+					// stoptrack
+					if (stop_tmp.pid !=13&&c.base.begin()->pl < 4) {//penetrate
+						stop_tmp.stop_flg = 0;
+					}
+					if (stop_tmp.pid != 13 && c.base.begin()->x < 10000 || c.base.begin()->x > 240000) {//side out
+						stop_tmp.stop_flg = 0;
+					}
+					if (stop_tmp.pid != 13 && c.base.begin()->y < 10000 || c.base.begin()->y > 240000) {//side out
+						stop_tmp.stop_flg = 0;
+					}
 					pos = stop_tmp.pl1;
 					stop_tmp.rawid = c.base.rbegin()->rawid;
 					stop_tmp.ax = c.base.rbegin()->ax;
@@ -410,6 +423,16 @@ void read_muon_mc_txt(std::vector<Momentum_recon::Event_information>& momch, std
 				}
 				if (stop_tmp.pl0 > stop_tmp.stoppl) {//bwd
 					//start
+									// bwd
+					if (stop_tmp.pid != 13 && c.base.rbegin()->pl > 130) {//penetrate
+						stop_tmp.stop_flg = 0;
+					}
+					if (stop_tmp.pid != 13 && c.base.rbegin()->x < 10000 || c.base.rbegin()->x  >240000) {//side out
+						stop_tmp.stop_flg = 0;
+					}
+					if (stop_tmp.pid != 13 && c.base.rbegin()->y < 10000 || c.base.rbegin()->y > 240000) {//side out
+						stop_tmp.stop_flg = 0;
+					}
 					stop_tmp.rawid = c.base.begin()->rawid;
 					stop_tmp.ax = c.base.begin()->ax;
 					stop_tmp.ay = c.base.begin()->ay;
