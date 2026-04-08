@@ -127,10 +127,15 @@ void add_chain_flg_to_charge_sign_2(std::vector<Momentum_recon::Event_informatio
 
 int main(int argc, char** argv) {
 	if (argc < 5) {
-		fprintf(stderr, "usage:prg in.momch in.txt flg output.momch [0]\n");
+		fprintf(stderr, "\nusage:prg in.momch in.txt flg output.momch [mode:default==-1]\n");
 		fprintf(stderr, "=============================================================\n");
 		fprintf(stderr, " * flg\n");
-		fprintf(stderr, " -2:erased by manual check, -3:erased by final check\n");
+		fprintf(stderr, " -15:excluded by PartnerViewerCheck\n");
+		fprintf(stderr, " -10:erased by manual check\n");
+		fprintf(stderr, "  -5:erased by RangeMomentumCut\n\n");
+		fprintf(stderr, " * mode\n");
+		fprintf(stderr, "  -1:add flg to listed chain except for pid == 13\n");
+		fprintf(stderr, "   1:add flg to not listed and pid != 13 chains\n");
 		fprintf(stderr, "=============================================================\n");
 		exit(1);
 	}
