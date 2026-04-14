@@ -96,8 +96,8 @@ void clustering_2trk_vtx2_ver2(std::multimap<int, stop_track>& tracks, int pl, s
 
 int main(int argc, char** argv) {
 	if (argc < 3) {
-		fprintf(stderr, "usage:prg in-mfile.all out-vtx.txt #ECC\n");
-		fprintf(stderr, "usage:prg in-mfile.all out-vtx.txt #ECC 1\n-->does not display logs...\n");
+		fprintf(stderr, "usage:prg in_mc_momch.txt out_chain.txt #ECC\n");
+		fprintf(stderr, "usage:prg in_mc_momch.txt out_chain.txt #ECC 1\n-->does not display logs...\n");
 		exit(1);
 	}
 	std::string in_momch = argv[1];
@@ -397,7 +397,7 @@ void clustering_2trk_vtx2_ver2(std::multimap<int, stop_track>& tracks, int pl, s
 
 	for (auto itr0 = ret.begin(); itr0 != ret.end(); itr0++) {
 		for (auto itr1 = itr0->trk.begin(); itr1 != itr0->trk.end(); itr1++) {
-			if (mode == 1)std::cout << "\tData:( " << itr0->x << ", " << itr0->y << ", " << itr0->z << " ), MC:( " << itr1->second.vx << ", " << itr1->second.vy << ", " << itr1->second.vz << " )" << std::endl;
+			if (mode == 1)std::cout << "\tCalc:( " << itr0->x << ", " << itr0->y << ", " << itr0->z << " ), MC_recon:( " << itr1->second.vx << ", " << itr1->second.vy << ", " << itr1->second.vz << " )" << std::endl;
 			ofs << std::right << std::fixed
 				// information of vertex
 				<< std::setw(2) << std::setprecision(0) << ecc << " "
@@ -405,9 +405,12 @@ void clustering_2trk_vtx2_ver2(std::multimap<int, stop_track>& tracks, int pl, s
 				<< std::setw(3) << std::setprecision(0) << itr0->unixtime << " "
 				<< std::setw(6) << std::setprecision(0) << itr0->pl << " "
 				<< std::setw(4) << std::setprecision(0) << itr0->trk.size() << " "
-				<< std::setw(10) << std::setprecision(1) << itr1->second.vx << " "
-				<< std::setw(10) << std::setprecision(1) << itr1->second.vy << " "
-				<< std::setw(10) << std::setprecision(1) << itr1->second.vz << " "
+				//<< std::setw(10) << std::setprecision(1) << itr1->second.vx << " "
+				//<< std::setw(10) << std::setprecision(1) << itr1->second.vy << " "
+				//<< std::setw(10) << std::setprecision(1) << itr1->second.vz << " "
+				<< std::setw(10) << std::setprecision(1) << itr0->x << " "
+				<< std::setw(10) << std::setprecision(1) << itr0->y << " "
+				<< std::setw(10) << std::setprecision(1) << itr0->z << " "
 				<< std::setw(8) << std::setprecision(1) << itr0->dz << " "
 				// information of track
 				<< std::setw(3) << std::setprecision(0) << itr1->second.chainid << " "

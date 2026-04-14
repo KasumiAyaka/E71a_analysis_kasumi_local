@@ -1,3 +1,7 @@
+// When I was given mc.momch from hayakawa-san, there's no linklet block.
+// This prg is to add linklet-block-information from original momch to momch given by hayakawa-san.
+
+
 #pragma comment(lib,"FILE_structure.lib")
 #pragma comment(lib,"functions.lib")
 #include <FILE_structure.hpp>

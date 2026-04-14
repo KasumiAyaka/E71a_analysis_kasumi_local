@@ -1,3 +1,6 @@
+// This prg id to output the information of mc-true.
+
+
 #pragma comment(lib,"FILE_structure.lib")
 #pragma comment(lib,"functions.lib")
 #include <FILE_structure.hpp>
