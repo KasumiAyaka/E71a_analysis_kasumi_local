@@ -103,8 +103,10 @@ int main(int argc, char** argv) {
 	if (argc < 3) {
 		fprintf(stderr, "usage:prg in-momch.momch out-vtx.txt #ECC [mode = 0] [tan_thr = 15.0]\n");
 		fprintf(stderr, "---------------------------------------------------------------------\n");
-		fprintf(stderr, "mode (default = 0) : 0 = use all track to calcurate vertex point, -5 = after manchk , -2 = after manchk & rng-mom cut\n");
-		fprintf(stderr, "tan_thr (default = 15.0) : cut chains if it's sqrt(ax**2 + ay**2) > tan_thr.\n");
+		fprintf(stderr, "  mode (default = 0) :  0 = use all track to calcurate vertex point\n");
+		fprintf(stderr, "                      -10 = after manchk\n");
+		fprintf(stderr, "                       -5 = after manchk & rng-mom cut\n");
+		fprintf(stderr, "  tan_thr (default = 15.0) : cut chains if it's sqrt(ax**2 + ay**2) > tan_thr.\n");
 		fprintf(stderr, "---------------------------------------------------------------------\n");
 		exit(1);
 	}

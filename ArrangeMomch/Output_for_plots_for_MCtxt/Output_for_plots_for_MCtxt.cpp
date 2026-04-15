@@ -93,9 +93,27 @@ double minimum_distance_fixed(matrix_3D::vector_3D pos0, matrix_3D::vector_3D po
 
 void read_stop_txt(std::string in_momch, std::multimap<tkey, stop_track>& tracks);
 void clustering_2trk_vtx2_ver2(std::multimap<int, stop_track>& tracks, int pl, std::ofstream& ofs, int ecc, int mode);
+void MeasureProcessingTime(std::chrono::system_clock::time_point& start, std::chrono::system_clock::time_point& end) {
+	auto dur = end - start;        // 要した時間を計算
+	auto msec = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
+	// 要した時間をミリ秒（1/1000秒）に変換して表示
+	std::cout << msec << " milli sec \n";
+	if (msec / 1000 < 60) {
+		std::cout << msec / 1000 << "sec\n";
+	}
+	else if (msec / 1000 / 60 < 60) {
+		std::cout << msec / 1000 / 60 << "min\n";
+	}
+	else if (msec / 1000 / 3600 < 24) {
+		std::cout << msec / 1000 / 3600 << "h\n";
+	}
+	else {
+		std::cout << (msec / 1000 / 3600) / 24 << "day" << (msec / 1000 / 3600) % 24 << "h\n";
+	}
+};
 
 int main(int argc, char** argv) {
-	if (argc < 3) {
+	if (argc < 4) {
 		fprintf(stderr, "usage:prg in_mc_momch.txt out_chain.txt #ECC\n");
 		fprintf(stderr, "usage:prg in_mc_momch.txt out_chain.txt #ECC 1\n-->does not display logs...\n");
 		exit(1);
@@ -107,12 +125,14 @@ int main(int argc, char** argv) {
 	if (argc == 5) {
 		mode = std::stoi(argv[4]);
 	}
+	auto start = std::chrono::system_clock::now();//for measure working time
 	//read momch
 
 	// reading stop.txt
+	std::cout << "\t* Reading momch.txt" << std::endl;
 	std::multimap<tkey, stop_track> stop;
 	read_stop_txt(in_momch, stop);
-	std::cout << "fin reading stoptrack." << std::endl;
+	std::cout << "\tfin reading stoptrack." << std::endl;
 
 	//file消去
 	std::ofstream ofs(out_txt);
@@ -122,13 +142,13 @@ int main(int argc, char** argv) {
 	for (auto itr = stop.begin(); itr != stop.end(); itr++) {
 		set.insert(itr->first);
 	}
-	std::cout << set.size() << std::endl;
+	std::cout << "\t  #event = " << set.size() << std::endl;
 
-	std::cout << "Calc Vertex point" << std::endl;
+	std::cout << "\t* Calc Vertex point" << std::endl;
 	ofs.open(out_txt);
 	for (auto ev = set.begin(); ev != set.end(); ev++) {
 		auto tks = stop.equal_range(*ev);
-		if (mode == 1)	printf("  * event %5d, #trk = %2d\n", *ev, stop.count(*ev));
+		if (mode == 1)	printf("\t\t* event %5d, #trk = %2d\n", *ev, stop.count(*ev));
 		std::multimap<int, stop_track> rid;
 		for (auto itr0 = tks.first; itr0 != tks.second; itr0++) {
 			rid.insert(std::make_pair(itr0->second.rawid, itr0->second));
@@ -136,6 +156,8 @@ int main(int argc, char** argv) {
 		clustering_2trk_vtx2_ver2(rid, rid.begin()->second.stoppl, ofs, ecc, mode);
 		rid.clear();
 	}
+	auto end = std::chrono::system_clock::now();       // 計測終了時刻を保存
+	MeasureProcessingTime(start, end);
 
 }
 
@@ -278,7 +300,7 @@ void read_stop_txt(std::string in_momch, std::multimap<tkey, stop_track>& tracks
 		//	// linklet
 		//}
 	}
-	std::cout << "tracks = " << tracks.size() << std::endl;
+	std::cout << "\t  tracks = " << tracks.size() << std::endl;
 }
 void clustering_2trk_vtx2_ver2(std::multimap<int, stop_track>& tracks, int pl, std::ofstream& ofs, int ecc,int mode) {
 	double refz = 0; int utime;
