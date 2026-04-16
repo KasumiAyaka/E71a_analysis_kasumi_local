@@ -147,8 +147,11 @@ int main(int argc, char** argv) {
 			printf("event %5d, vtx search\n", *ev);
 			std::multimap<int, stop_track> rid, all;
 			for (auto itr0 = tks.first; itr0 != tks.second; itr0++) {
-				std::cout << *ev << " " << itr0->second.chainid << " " << itr0->second.charge;
-				if (itr0->second.pid == 13) {
+				std::cout << std::right << std::fixed
+					<< std::setw(5) << std::setprecision(0) << *ev << " "
+					<< std::setw(5) << std::setprecision(0) << itr0->second.chainid << " "
+					<< std::setw(3) << std::setprecision(0) << itr0->second.charge;
+					if (itr0->second.pid == 13) {
 					rid.insert(std::make_pair(itr0->second.rawid, itr0->second));
 					std::cout << std::endl;
 				}
@@ -176,7 +179,10 @@ int main(int argc, char** argv) {
 			printf("event %5d, vtx search\n", *ev);
 			std::multimap<int, stop_track> rid, all;
 			for (auto itr0 = tks.first; itr0 != tks.second; itr0++) {
-				std::cout << *ev << " " << itr0->second.chainid << " " << itr0->second.charge << std::endl;
+				std::cout << std::right << std::fixed
+					<< std::setw(5) << std::setprecision(0) << *ev << " "
+					<< std::setw(5) << std::setprecision(0) << itr0->second.chainid << " "
+					<< std::setw(3) << std::setprecision(0) << itr0->second.charge;
 				rid.insert(std::make_pair(itr0->second.rawid, itr0->second));
 			}
 			clustering_2trk_vtx2(rid, rid.begin()->second.vpl, ofs, ecc);

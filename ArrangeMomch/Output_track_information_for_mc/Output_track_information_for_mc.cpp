@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "     mode =  0 : use all track to calcurate vertex point\n     mode = -5 : after manchk\n     mode = -2 : after manchk & rng-mom cut\n");
 		fprintf(stderr, "  * tan_thr (default = 15.0) \n");
 		fprintf(stderr, "     cut chains if it's sqrt(ax**2 + ay**2) > tan_thr.\n");
-		fprintf(stderr, "  * edgecut (default = 40000.0)  \n");
+		fprintf(stderr, "  * edgecut (default = 0.0 um --> no cut)  \n");
 		fprintf(stderr, "     rejected area.(muon xpos,ypos)\n");
 		fprintf(stderr, "  * option \n");
 		fprintf(stderr, "     if input 1 --> use momch.txt\n");
@@ -137,23 +137,27 @@ int main(int argc, char** argv) {
 	std::string out_txt = argv[2];
 	int ecc = std::stoi(argv[3]);
 	int mode = 0;
-	if (argc == 5) {
+	if (argc >= 5) {
 		mode = std::stoi(argv[4]);
 	}
 	double tan_thr = 15.0;
-	if (argc == 6) {
+	if (argc >= 6) {
 		tan_thr = std::stod(argv[5]);
 	}
-	double edgecut = 40000.0;
-	if (argc == 7) {
+	double edgecut = 0.0;
+	if (argc >= 7) {
 		edgecut = std::stod(argv[6]);
 	}
 	int readtxt = -1;
-	if (argc == 8) {
+	if (argc >= 8) {
 		readtxt = 1;
 	}
-	auto start = std::chrono::system_clock::now();//for measure working time
+//	int a;
+//	std::cout << "(mode, tan_thr, edgecut) = ( " << mode << ", " << tan_thr << ", " << edgecut << ")" << std::endl;
+//	std::cin >> a;
 
+
+	auto start = std::chrono::system_clock::now();//for measure working time
 	std::multimap<int, stop_track> stop;
 
 	if (readtxt < 0) {
@@ -187,8 +191,11 @@ int main(int argc, char** argv) {
 			printf("event %5d, vtx search\n", *ev);
 			std::multimap<int, stop_track> rid, all;
 			for (auto itr0 = tks.first; itr0 != tks.second; itr0++) {
-				std::cout << *ev << " " << itr0->second.chainid << " " << itr0->second.charge;
-				if (itr0->second.pid == 13) {
+				std::cout << std::right << std::fixed
+					<< std::setw(5) << std::setprecision(0) << *ev << " "
+					<< std::setw(5) << std::setprecision(0) << itr0->second.chainid << " "
+					<< std::setw(3) << std::setprecision(0) << itr0->second.charge;
+				if (itr0->second.pid % 10000 == 13) {
 					rid.insert(std::make_pair(itr0->second.chainid, itr0->second));
 					std::cout << std::endl;
 					pos[0] = itr0->second.x;
@@ -208,9 +215,13 @@ int main(int argc, char** argv) {
 					}
 				}
 			}
-			if (pos[0] < edgecut || pos[0]>250000.0 - edgecut || pos[1] < edgecut || pos[1]>250000.0 - edgecut) {
-				std::cout << "\t( x, y ) = ( " << pos[0] << ", " << pos[1] << " )" << std::endl;
-				std::cout << "\t-->Edge Area(rejected)." << std::endl;
+			if (edgecut > 0) {
+				if (pos[0] < edgecut || pos[0] > 250000.0 - edgecut || pos[1] < edgecut || pos[1] > 250000.0 - edgecut) {
+					std::cout << "\t( x, y ) = ( " << pos[0] << ", " << pos[1] << " )\t-->Edge Area(rejected)." << std::endl;
+				}
+				else {
+					clustering_2trk_vtx2_ver2(rid, all, rid.begin()->second.vpl, ofs, ecc);
+				}
 			}
 			else {
 				clustering_2trk_vtx2_ver2(rid, all, rid.begin()->second.vpl, ofs, ecc);
@@ -224,10 +235,34 @@ int main(int argc, char** argv) {
 			printf("event %5d, vtx search\n", *ev);
 			std::multimap<int, stop_track> rid, all;
 			for (auto itr0 = tks.first; itr0 != tks.second; itr0++) {
-				std::cout << *ev << " " << itr0->second.chainid << " " << itr0->second.charge << std::endl;
+				std::cout << std::right << std::fixed
+					<< std::setw(5) << std::setprecision(0) << *ev << " "
+					<< std::setw(5) << std::setprecision(0) << itr0->second.chainid << " "
+					<< std::setw(3) << std::setprecision(0) << itr0->second.charge;
 				rid.insert(std::make_pair(itr0->second.rawid, itr0->second));
+				if (itr0->second.pid%10000 == 13) {
+					pos[0] = itr0->second.x;
+					pos[1] = itr0->second.y;
+					std::cout << "\t( x, y ) = ( " << itr0->second.x << ", " << itr0->second.y << " )" << std::endl;
+				}
+				else {
+					std::cout << std::endl;
+				}
 			}
-			clustering_2trk_vtx2(rid, rid.begin()->second.vpl, ofs, ecc);
+			if (edgecut > 0.0) {
+				if (pos[0] < edgecut || pos[0] > 250000.0 - edgecut || pos[1] < edgecut || pos[1] > 250000.0 - edgecut) {
+					std::cout << "\t--> Edge Area(rejected)." << std::endl;
+				}
+				else {
+					std::cout << "use" << std::endl;
+					clustering_2trk_vtx2(rid, rid.begin()->second.vpl, ofs, ecc);
+					
+				}
+			}
+			else {
+				clustering_2trk_vtx2(rid, rid.begin()->second.vpl, ofs, ecc);
+				std::cout << std::endl;
+			}
 			rid.clear();
 		}
 
@@ -343,20 +378,23 @@ void read_mcmomch_txt(std::string in_momch, std::multimap<int, stop_track>& trac
 	int flg = 0;
 	int all = 0;
 	int cutnum = 0;
+	int addgid = 0;
 	while (std::getline(ifs, str)) {
 		str_v = StringSplit_with_tab(str);
 		//std::cout << str << std::endl;
 
 		if (str_v.size() == 19 && std::stoi(str_v[1]) < 0) {//event header
-			stop_tmp.groupid = std::stoi(str_v[0]);
+			//stop_tmp.groupid = std::stoi(str_v[0]);
+			stop_tmp.groupid = addgid;
+			addgid++;
 			stop_tmp.unixtime = std::stoi(str_v[1]);
 			stop_tmp.vpl = std::stoi(str_v[4]) % 1000;
 			stop_tmp.vertex_material = std::stoi(str_v[6]);
 
 			// vertex pos(recon)
-			stop_tmp.x = std::stod(str_v[7]);
-			stop_tmp.y = std::stod(str_v[8]);
-			stop_tmp.z = std::stod(str_v[9]);
+			//stop_tmp.vx = std::stod(str_v[7]);
+			//stop_tmp.vy = std::stod(str_v[8]);
+			//stop_tmp.vz = std::stod(str_v[9]);
 
 			stop_tmp.w = std::stod(str_v[13]);
 			k = 0;
