@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
 	std::string in_momch = argv[1];// input momch
 	int eccnum = std::stoi(argv[2]);
 	std::string out_momch;
-	if (out_momch != "") {
+	if (argc > 3) {
 		out_momch = argv[3];// output momch
 	}
 	else {
@@ -105,6 +105,7 @@ int main(int argc, char** argv) {
 
 	if (eccnum < 1) {
 		std::cout << "Warning!\nPlease enter the appropriate ECC numbers." << std::endl;
+		std::cin >> eccnum;
 	}
 	else if (eccnum >9) {
 		std::cout << "Warning!\nIs this ECC number valid?\nNote that in the E71a experiment, ECC numbers range from 1 to 9." << std::endl;
@@ -136,7 +137,7 @@ int main(int argc, char** argv) {
 	// read momch
 	std::vector<Momentum_recon::Event_information> momch = Momentum_recon::Read_Event_information_extension(in_momch);
 
-
+	add_eccnum(momch, eccnum);
 
 	// write out
 	Momentum_recon::Write_Event_information_extension(out_momch, momch);
