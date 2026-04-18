@@ -81,6 +81,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Output_MC_momch_true_brock"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pickup_mc_linklet_block_via_VertexPosition", "Pickup_mc_linklet_block_via_VertexPosition\Pickup_mc_linklet_block_via_VertexPosition.vcxproj", "{9ABC7FE8-F7F8-4AB9-9864-212D9F5503EA}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Add_ECCnum_to_momch", "Add_ECCnum_to_momch\Add_ECCnum_to_momch.vcxproj", "{85687254-FFA1-403B-A610-2A2C50EF13DD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -401,6 +403,14 @@ Global
 		{9ABC7FE8-F7F8-4AB9-9864-212D9F5503EA}.Release|x64.Build.0 = Release|x64
 		{9ABC7FE8-F7F8-4AB9-9864-212D9F5503EA}.Release|x86.ActiveCfg = Release|Win32
 		{9ABC7FE8-F7F8-4AB9-9864-212D9F5503EA}.Release|x86.Build.0 = Release|Win32
+		{85687254-FFA1-403B-A610-2A2C50EF13DD}.Debug|x64.ActiveCfg = Debug|x64
+		{85687254-FFA1-403B-A610-2A2C50EF13DD}.Debug|x64.Build.0 = Debug|x64
+		{85687254-FFA1-403B-A610-2A2C50EF13DD}.Debug|x86.ActiveCfg = Debug|Win32
+		{85687254-FFA1-403B-A610-2A2C50EF13DD}.Debug|x86.Build.0 = Debug|Win32
+		{85687254-FFA1-403B-A610-2A2C50EF13DD}.Release|x64.ActiveCfg = Release|x64
+		{85687254-FFA1-403B-A610-2A2C50EF13DD}.Release|x64.Build.0 = Release|x64
+		{85687254-FFA1-403B-A610-2A2C50EF13DD}.Release|x86.ActiveCfg = Release|Win32
+		{85687254-FFA1-403B-A610-2A2C50EF13DD}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

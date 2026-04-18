@@ -51,7 +51,6 @@ struct Lst {
 bool operator<(const Lst& lhs, const Lst& rhs) {
 	return std::tie(lhs.gid, lhs.cid) < std::tie(rhs.gid, rhs.cid);
 }
-auto start = std::chrono::system_clock::now();//for measure working time
 
 void MeasureProcessingTime(std::chrono::system_clock::time_point& start, std::chrono::system_clock::time_point& end) {
 	auto dur = end - start;        // —v‚µ‚½ŽžŠÔ‚ðŒvŽZ
