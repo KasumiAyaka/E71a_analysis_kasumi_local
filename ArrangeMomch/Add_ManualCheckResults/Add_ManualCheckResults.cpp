@@ -129,6 +129,9 @@ int main(int argc, char** argv) {
 		fprintf(stderr, " usage:prg in.momch output.momch materialflg [in_list.txt] [0:add sandmuon flg]\n\n * materialflg\n");
 		fprintf(stderr, "\t 0 : water\t\n 1 : carbon(base)\t\n 2 : iron\t\n 5 : emulsion\t\n 6 : envelope\n");
 		fprintf(stderr, "\t-2 : sand muon(penetrate)\t -3 :sideout\n");
+		fprintf(stderr, " usage:prg in.momch output.momch materialflg\n ==> Set the material flag for all events.\n");
+		fprintf(stderr, " usage:prg in.momch output.momch materialflg [in_list.txt]\n ==> Set the material flag for the specified event.");
+		fprintf(stderr, " usage:prg in.momch output.momch materialflg [in_list.txt] 0\n ==> Set the material flag = -2 for the specified event.");
 		fprintf(stderr, "===============================================================================\n");
 		exit(1);
 	}
