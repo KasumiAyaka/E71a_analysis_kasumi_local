@@ -120,8 +120,7 @@ double minimum_distance_fixed(matrix_3D::vector_3D pos0, matrix_3D::vector_3D po
 
 void Display_recon_basetrack(std::vector<Momentum_recon::Event_information>& momch, Key k);
 void Display_true_basetrack(std::vector<Momentum_recon::Event_information>& momch, Key k);
-void Display_vertex_information_mc(std::vector<Momentum_recon::Event_information>& momch, Key k);
-void Display_vertex_information_data(std::vector<Momentum_recon::Event_information>& momch, Key k);
+void Display_vertex_information(std::vector<Momentum_recon::Event_information>& momch, Key k);
 
 int main(int argc, char** argv) {
 	if (argc <2) {
@@ -145,25 +144,15 @@ int main(int argc, char** argv) {
 		std::cout << "Do you want to display vertex information? Or do you want to display basetrack information?" << std::endl;
 		std::cout << " vertex --> input 1\n basetrack --> input 2\n exit --> -1" << std::endl;
 		std::cin >> mode;
+		if (mode > 2)continue;
+
 		k = { 0 };
 		if (mode == 1) {// vertex
-			std::cout << "Is the file you loaded an MC file, or is it data?" << std::endl;
-			std::cout << " MC --> input 1\n Data --> input 2\n exit --> -1" << std::endl;
-			std::cin >> mode;
-			std::cout << std::endl;
-			if (mode < 0)break;
-			
 			std::cout << "Please input groupid" << std::endl;
 			std::cin >> k.gid;
 			std::cout << std::endl;
 
-			if (mode == 1) {
-				Display_vertex_information_mc(momch, k);
-			}
-			else if (mode == 2) {
-				Display_vertex_information_data(momch, k);
-			}
-
+			Display_vertex_information(momch, k);
 
 		}
 		else if (mode == 2) {// btrk
@@ -171,6 +160,7 @@ int main(int argc, char** argv) {
 			std::cout << "   true  --> input 1\n   recon --> input 2\n   exit  --> -1" << std::endl;
 			std::cin >> mode;
 			if (mode < 0)break;
+			if (mode > 2)continue;
 
 			std::cout << "Please input groupid, chainid, pl. \nex) 912 0 72" << std::endl;
 			std::cin >> k.gid >> k.cid >> k.pl;
@@ -209,9 +199,9 @@ void Display_recon_basetrack(std::vector<Momentum_recon::Event_information>& mom
 							if (c.particle_flg % 10000 == 2212) {
 								mom = c.ecc_mcs_mom[1];
 							}
-							std::cout << std::right << std::fixed
+							std::cout << std::left << std::fixed
 								<< " groupid = " << std::setw(5) << ev.groupid << "\n"
-								<< " vertex material = " << std::setw(3) << ev.vertex_material << "\n"
+								<< " vertex material = " << std::setw(3) << ev.vertex_material << " (0:wt, 1:base, 2:iron,5:emul, -2:pene,-5:dup)\n"
 								<< " chainid = " << std::setw(3) << c.chainid << "\n"
 								<< " pl      = " << std::setw(3) << b.pl << "\n"
 								<< " ax      = " << std::setw(8) << std::setprecision(4) << b.ax << "\n"
@@ -247,7 +237,7 @@ void Display_true_basetrack(std::vector<Momentum_recon::Event_information>& momc
 							if (c.particle_flg % 10000 == 2212) {
 								mom = c.ecc_mcs_mom[1];
 							}
-							std::cout << std::right << std::fixed
+							std::cout << std::left << std::fixed
 								<< " groupid = " << std::setw(5) << ev.groupid << "\n"
 								<< " vertex material = " << std::setw(3) << ev.vertex_material << " (0:wt, 1:base, 2:iron,5:emul, -2:pene,-5:dup)\n"
 								<< " chainid = " << std::setw(3) << c.chainid << "\n"
@@ -272,14 +262,15 @@ void Display_true_basetrack(std::vector<Momentum_recon::Event_information>& momc
 		}
 	}
 }
-void Display_vertex_information_mc(std::vector<Momentum_recon::Event_information>& momch, Key k) {
+void Display_vertex_information(std::vector<Momentum_recon::Event_information>& momch, Key k) {
 
 	int vpl;
 	for (auto& ev : momch) {
 		if (ev.groupid == k.gid) {
-			std::cout << std::right << std::fixed
+			std::cout << std::left << std::fixed
 				<< " groupid = "<< std::setw(5) << ev.groupid << "\n"
-				<< " Vertex material = " << std::setw(3) << ev.vertex_material << "\n"
+				<< " Timestamp = " << std::setw(3) << ev.unix_time << "\n"
+				<< " Vertex material = " << std::setw(3) << ev.vertex_material << " (0:wt, 1:base, 2:iron,5:emul, -2:pene,-5:dup)\n"
 				<< " vertex pl      = " << std::setw(3) << ev.vertex_pl << "\n"
 				<< " # of true trk  = " << std::setw(3) << ev.true_chains.size() << "\n"
 				<< " # of recon trk = " << std::setw(3) << ev.chains.size() << "\n"
@@ -292,27 +283,6 @@ void Display_vertex_information_mc(std::vector<Momentum_recon::Event_information
 				<< " recon vy = " << std::setw(8) << std::setprecision(1) << ev.vertex_position[1] << "\n"
 				<< " recon vz = " << std::setw(8) << std::setprecision(1) << ev.vertex_position[2] << "\n"
 				<< " weight   = " << std::setw(8) << std::setprecision(4) <<ev.weight << "\n"
-				<< std::endl;
-		}
-	}
-}
-void Display_vertex_information_data(std::vector<Momentum_recon::Event_information>& momch, Key k) {
-
-	int vpl;
-	for (auto& ev : momch) {
-		if (ev.groupid == k.gid) {
-			std::cout << std::right << std::fixed
-				<< " groupid = " << std::setw(5) << ev.groupid << "\n"
-				<< " Timestamp = " << std::setw(3) << ev.unix_time << "\n"
-				<< " Bunch = " << std::setw(3) << ev.weight << "\n"
-				<< " Vertex material = " << std::setw(3) << ev.vertex_material << "\n"
-				<< " vertex pl      = " << std::setw(3) << ev.vertex_pl << "\n"
-				<< " # of recon trk = " << std::setw(3) << ev.chains.size() << "\n"
-				<< " ax of neutrino = " << std::setw(8) << std::setprecision(4) << ev.nu_ax << "\n"
-				<< " ay of neutrino = " << std::setw(8) << std::setprecision(4) << ev.nu_ay << "\n"
-				<< " recon vx = " << std::setw(8) << std::setprecision(1) << ev.vertex_position[0] << "\n"
-				<< " recon vy = " << std::setw(8) << std::setprecision(1) << ev.vertex_position[1] << "\n"
-				<< " recon vz = " << std::setw(8) << std::setprecision(1) << ev.vertex_position[2] << "\n"
 				<< std::endl;
 		}
 	}
