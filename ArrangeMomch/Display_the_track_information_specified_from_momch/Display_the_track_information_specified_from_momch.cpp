@@ -150,10 +150,12 @@ int main(int argc, char** argv) {
 			std::cout << "Is the file you loaded an MC file, or is it data?" << std::endl;
 			std::cout << " MC --> input 1\n Data --> input 2\n exit --> -1" << std::endl;
 			std::cin >> mode;
+			std::cout << std::endl;
 			if (mode < 0)break;
 			
 			std::cout << "Please input groupid" << std::endl;
 			std::cin >> k.gid;
+			std::cout << std::endl;
 
 			if (mode == 1) {
 				Display_vertex_information_mc(momch, k);
@@ -172,7 +174,7 @@ int main(int argc, char** argv) {
 
 			std::cout << "Please input groupid, chainid, pl. \nex) 912 0 72" << std::endl;
 			std::cin >> k.gid >> k.cid >> k.pl;
-
+			std::cout << std::endl;
 			if (mode == 1) {
 				Display_true_basetrack(momch, k);
 			}
@@ -181,6 +183,7 @@ int main(int argc, char** argv) {
 			}
 
 		}
+		std::cout << std::endl;
 
 	} while (mode > 0);
 
@@ -218,11 +221,11 @@ void Display_recon_basetrack(std::vector<Momentum_recon::Event_information>& mom
 								<< " z       = " << std::setw(8) << std::setprecision(1) << b.z << "\n"
 								<< " VPH     = " << std::setw(4) << std::setprecision(0) << (b.m[0].ph + b.m[1].ph) % 10000 << "\n"
 								<< " PID     = " << std::setw(4) << c.particle_flg % 10000 << "\n"
-								<< " MCS     = " << std::setw(8) << std::setprecision(4) << mom << "\n"
-								<< " muon pb = " << std::setw(8) << std::setprecision(4) << c.Get_muon_mcs_pb() << "\n"
-								<< " bm rng  = " << std::setw(8) << std::setprecision(4) << c.bm_range_mom << "\n"
-								<< " bm curv = " << std::setw(8) << std::setprecision(4) << c.bm_curvature_mom << "\n"
-								<< " rawid  = " << std::setw(8) << std::setprecision(0) << b.rawid
+								<< " MCS     = " << std::setw(8) << std::setprecision(1) << mom << "\n"
+								<< " muon pb = " << std::setw(8) << std::setprecision(1) << c.Get_muon_mcs_pb() << "\n"
+								<< " bm rng  = " << std::setw(8) << std::setprecision(1) << c.bm_range_mom << "\n"
+								<< " bm curv = " << std::setw(8) << std::setprecision(1) << c.bm_curvature_mom << "\n"
+								<< " rawid  = " << std::setw(8) << std::setprecision(0) << b.rawid << "\n"
 								<< std::endl;
 						}
 					}
@@ -256,11 +259,11 @@ void Display_true_basetrack(std::vector<Momentum_recon::Event_information>& momc
 								<< " z       = " << std::setw(8) << std::setprecision(1) << b.z << "\n"
 								<< " VPH     = " << std::setw(4) << std::setprecision(0) << (b.m[0].ph + b.m[1].ph) % 10000 << "\n"
 								<< " PID     = " << std::setw(4) << c.particle_flg % 10000 << "\n"
-								<< " MCS     = " << std::setw(8) << std::setprecision(4) << mom << "\n"
-								<< " muon pb = " << std::setw(8) << std::setprecision(4) << c.Get_muon_mcs_pb() << "\n"
-								<< " bm rng  = " << std::setw(8) << std::setprecision(4) << c.bm_range_mom << "\n"
-								<< " bm curv = " << std::setw(8) << std::setprecision(4) << c.bm_curvature_mom << "\n"
-								<< " rawid   = " << std::setw(8) << std::setprecision(0) << b.rawid
+								<< " MCS     = " << std::setw(8) << std::setprecision(1) << mom << "\n"
+								<< " muon pb = " << std::setw(8) << std::setprecision(1) << c.Get_muon_mcs_pb() << "\n"
+								<< " bm rng  = " << std::setw(8) << std::setprecision(1) << c.bm_range_mom << "\n"
+								<< " bm curv = " << std::setw(8) << std::setprecision(1) << c.bm_curvature_mom << "\n"
+								<< " rawid   = " << std::setw(8) << std::setprecision(0) << b.rawid << "\n"
 								<< std::endl;
 						}
 					}
