@@ -112,46 +112,63 @@ void clustering_2trk_vtx2_ver3(std::multimap<int, stop_track>& tracks, int pl, s
 void clustering_2trk_vtx2_ver4(std::multimap<int, stop_track>& tracks, int pl, std::ofstream& ofs, std::map<tkey, VE_flg>& ve3flg);
 void read_stop_txt_mode2(std::vector<Momentum_recon::Event_information>& momch, std::multimap<int, stop_track>& tracks, double manflg);
 void read_muon_mc_txt(std::vector<Momentum_recon::Event_information>& momch, std::multimap<int, stop_track>& tracks);
+void read_muon_mc_all(std::vector<Momentum_recon::Event_information>& momch, std::multimap<int, stop_track>& tracks);
 
 
 int main(int argc, char** argv) {
-	if (argc < 5) {
+	if (argc < 3) {
+		fprintf(stderr, "usage:prg in-muon-mc.momch out-vtx.txt\n");
 		fprintf(stderr, "usage:prg in-muon-mc.momch in-vtx.momch out-vtx.txt VElist.txt\n");
-		fprintf(stderr, "usage:prg in-muon-mc.momch in-vtx.momch out-vtx.txt VElist.txt\n\t 1 ==> man chk cut\t 2 ==> man chk cut & fin chk cut\n");
+		fprintf(stderr, "usage:prg in-muon-mc.momch in-vtx.momch out-vtx.txt VElist.txt mode\n\t mode = 1 ==> man chk cut\t mode = 2 ==> man chk cut & fin chk cut\n");
+		std::cout << " argc = " << argc <<std::endl;
 		exit(1);
 	}
-	std::string in_muon_mc = argv[1];
-	std::string in_momch = argv[2];
-	std::string file_out_vtx = argv[3];
-	std::string velist_txt = argv[4];
+	std::string in_muon_mc, in_momch, file_out_vtx, velist_txt;
+		
+		
 	//std::string veflg_txt = argv[4];
 	int mode = 0;
 	if (argc == 6) {
 		mode = std::stoi(argv[5]);
 	}
-	std::cout << argc << " " << mode << std::endl;
+	std::cout << " argc = " << argc << ", mode = " << mode << std::endl;
 
-	//read momch
-	std::vector<Momentum_recon::Event_information> muon_momch = Momentum_recon::Read_Event_information_extension(in_muon_mc);
-	std::vector<Momentum_recon::Event_information> momch = Momentum_recon::Read_Event_information_extension(in_momch);
-	std::cout << "Finish reading momch." << std::endl;
-
-	// reading stop.txt
+	std::vector<Momentum_recon::Event_information> muon_mc, momch;
 	std::multimap<int, stop_track> stop;
-	if (mode == 0) {
-		read_stop_txt(momch, stop);// use all chain(no cut)
-		read_muon_mc_txt(muon_momch, stop);// use all chain(no cut)
-	}
-	else if (mode == 1) {
-		read_stop_txt_mode2(momch, stop, -5);// man chk[-10](cut manualcheck erased chain)
-		read_muon_mc_txt(muon_momch, stop);// use all chain(no cut)
-	}
-	else if (mode == 2) {
-		read_stop_txt_mode2(momch, stop, -1);// man chk & fin chk[-5](cut manual check erased chain and mom-rng cut)
-		read_muon_mc_txt(muon_momch, stop);// use all chain(no cut)
+
+	if (argc == 3) {
+		in_muon_mc = argv[1];
+		file_out_vtx = argv[2];
+		muon_mc = Momentum_recon::Read_Event_information_extension(in_muon_mc);
+		read_muon_mc_all(muon_mc, stop);// use all chain(no cut)
 	}
 	else {
-		//
+		in_muon_mc = argv[1];
+		in_momch = argv[2];
+		file_out_vtx = argv[3];
+		velist_txt = argv[4];
+
+		//read momch
+		muon_mc = Momentum_recon::Read_Event_information_extension(in_muon_mc);
+		momch = Momentum_recon::Read_Event_information_extension(in_momch);
+		std::cout << "Finish reading momch." << std::endl;
+
+		// reading stop.txt
+		if (mode == 0) {
+			read_stop_txt(momch, stop);// use all chain(no cut)
+			read_muon_mc_txt(muon_mc, stop);// use all chain(no cut)
+		}
+		else if (mode == 1) {
+			read_stop_txt_mode2(momch, stop, -5);// man chk[-10](cut manualcheck erased chain)
+			read_muon_mc_txt(muon_mc, stop);// use all chain(no cut)
+		}
+		else if (mode == 2) {
+			read_stop_txt_mode2(momch, stop, -1);// man chk & fin chk[-5](cut manual check erased chain and mom-rng cut)
+			read_muon_mc_txt(muon_mc, stop);// use all chain(no cut)
+		}
+		else {
+			//
+		}
 	}
 	std::cout << "\t* Finish reading stoptrack." << std::endl;
 
@@ -165,14 +182,7 @@ int main(int argc, char** argv) {
 	}
 	std::cout << "\t #of event : " << set.size() << std::endl;
 
-	//// VE List
-	//std::ifstream ifs(velist_txt);
-	//std::multiset<tkey> ve; tkey k;
-	//while (ifs >> k.eid >> k.ip) {//gid cid
-	//	ve.insert(k);
-	//}
-
-	//VE flg
+	// VE flg
 	std::ifstream ifs2(velist_txt);
 	std::map<tkey, VE_flg> veflg;
 	VE_flg vfg;
@@ -189,7 +199,7 @@ int main(int argc, char** argv) {
 		//printf("event %5d, vtx search\n", *ev);
 		std::multimap<int, stop_track> rid;
 		for (auto itr0 = tks.first; itr0 != tks.second; itr0++) {
-			rid.insert(std::make_pair(itr0->second.rawid, itr0->second));
+			rid.insert(std::make_pair(itr0->second.chainid, itr0->second));
 		}
 		//clustering_2trk_vtx2_ver3(rid, rid.begin()->second.stoppl, ofs, ve);
 		clustering_2trk_vtx2_ver4(rid, rid.begin()->second.stoppl, ofs, veflg);
@@ -661,7 +671,7 @@ void clustering_2trk_vtx2_ver3(std::multimap<int, stop_track>& tracks, int pl, s
 void clustering_2trk_vtx2_ver4(std::multimap<int, stop_track>& tracks, int pl, std::ofstream& ofs, std::map<tkey, VE_flg>& ve3flg) {
 	double refz = 0; int utime;
 	for (auto itr1 = tracks.begin(); itr1 != tracks.end(); itr1++) {
-		if (itr1->second.chainid == 0) {
+		if (itr1->second.pid == 13) {
 			refz = itr1->second.z;
 			utime = itr1->second.unixtime;
 		}
@@ -702,12 +712,20 @@ void clustering_2trk_vtx2_ver4(std::multimap<int, stop_track>& tracks, int pl, s
 				dir1.x = itr2->second.ax;
 				dir1.y = itr2->second.ay;
 				dir1.z = 1;
-
+				std::cout << pos0.x << ", " << pos0.y << ", " << pos0.z << ", " << dir0.x << ", " << dir0.y << ", " << dir0.z << std::endl;
+				std::cout << pos1.x << ", " << pos1.y << ", " << pos1.z << ", " << dir1.x << ", " << dir1.y << ", " << dir1.z << std::endl;
+				
 				// pos0‚ðŠî€‚Ézrange‚Ì”ÍˆÍ“à‚ÅÅ‹ßÚ‹——£‚ð‚Æ‚éˆÊ’u(extra)‚ð’Tõ
 				double md = minimum_distance_fixed(pos0, pos1, dir0, dir1, zrange, extra, refz);
+
+
 				track_pair pair_tmp;
 				matrix_3D::vector_3D extra0 = addition(pos0, const_multiple(dir0, extra[0]));
 				matrix_3D::vector_3D extra1 = addition(pos1, const_multiple(dir1, extra[1]));
+
+				std::cout << extra0.x << ", " << extra0.y << ", " << extra0.z << std::endl;
+				std::cout << extra1.x << ", " << extra1.y << ", " << extra1.z << std::endl;
+
 
 				pair_tmp.x = (extra0.x + extra1.x) / 2;
 				pair_tmp.y = (extra0.y + extra1.y) / 2;
@@ -727,6 +745,9 @@ void clustering_2trk_vtx2_ver4(std::multimap<int, stop_track>& tracks, int pl, s
 					itr1->second.mu_md = md;
 					itr1->second.mu_dz = pair_tmp.dz;
 				}
+				std::cout << pair_tmp.x << ", " << pair_tmp.y << ", " << pair_tmp.z << std::endl;
+				std::cout << multi.eventid << ", " << itr1->second.chainid << ", " << itr2->second.chainid << ", " << md << ", " << pair_tmp.dz << std::endl;
+
 				multi.pair.push_back(pair_tmp);
 			}
 		}
@@ -907,7 +928,7 @@ void read_muon_mc_txt(std::vector<Momentum_recon::Event_information>& momch, std
 	int use = 0;
 	double ax, ay, angle, dax, day, dal, dar, dl, dr, dx, dy;
 	for (auto& ev : momch) {
-		stop_tmp.stoppl = ev.vertex_pl%1000;
+		stop_tmp.stoppl = int(ev.vertex_pl % 1000);
 		stop_tmp.groupid = ev.groupid;
 		stop_tmp.unixtime = 10;
 
@@ -1022,6 +1043,129 @@ void read_muon_mc_txt(std::vector<Momentum_recon::Event_information>& momch, std
 		}
 	}
 
+	printf("\t* input fin.\n\t #of track : %d --> %d\n", cnt, use);
+
+}
+void read_muon_mc_all (std::vector<Momentum_recon::Event_information>& momch, std::multimap<int, stop_track>& tracks) {
+	stop_track stop_tmp;
+
+	int pos = 0;
+	int cnt = 0;
+	int use = 0;
+	double ax, ay, angle, dax, day, dal, dar, dl, dr, dx, dy;
+	for (auto& ev : momch) {
+		stop_tmp = { 0 };
+		stop_tmp.stoppl = int(ev.vertex_pl %1000);
+		stop_tmp.groupid = ev.groupid;
+		stop_tmp.unixtime = 10;
+		std::cout << stop_tmp.groupid << ", " << stop_tmp.stoppl << std::endl;
+
+		//for (auto& c : ev.true_chains) {}
+		for (auto& c : ev.chains) {
+			cnt++;
+			if (c.base.size() == 1)continue;
+			stop_tmp.chainid = c.chainid;
+			stop_tmp.nseg = c.base.size();
+			stop_tmp.pl0 = c.base.begin()->pl;//dounstream
+			stop_tmp.pl1 = c.base.rbegin()->pl;//upstream
+			stop_tmp.npl = stop_tmp.pl1 - stop_tmp.pl0 + 1;
+			stop_tmp.pid = int(c.particle_flg % 10000);
+			stop_tmp.mom = c.ecc_mcs_mom[0];
+			stop_tmp.rng = c.ecc_range_mom[0];
+			stop_tmp.stop_flg = c.stop_flg;
+			if (c.particle_flg == 2212) {
+				stop_tmp.mom = c.ecc_mcs_mom[1];
+				stop_tmp.rng = c.ecc_range_mom[1];
+			}
+			stop_tmp.pb = c.Get_proton_mcs_pb();
+
+
+			if (stop_tmp.pl1 <= stop_tmp.stoppl) {//fwd
+				pos = stop_tmp.pl1;
+				stop_tmp.rawid = c.base.rbegin()->rawid;
+				stop_tmp.ax = c.base.rbegin()->ax;
+				stop_tmp.ay = c.base.rbegin()->ay;
+				stop_tmp.x = c.base.rbegin()->x;
+				stop_tmp.y = c.base.rbegin()->y;
+				stop_tmp.z = c.base.rbegin()->z;
+				stop_tmp.vph = c.base.rbegin()->m[0].ph % 10000 + c.base.rbegin()->m[1].ph % 10000;
+				stop_tmp.vph2 = std::next(c.base.rbegin(), 1)->m[0].ph % 10000 + std::next(c.base.rbegin(), 1)->m[1].ph % 10000;
+
+				if (c.base_pair.size() != 0) {
+					auto itr = c.base_pair.rbegin();
+					ax = itr->first.ax;
+					ay = itr->first.ay;
+					angle = sqrt(ax * ax + ay * ay);
+					dax = itr->second.ax - ax;
+					day = itr->second.ay - ay;
+					dx = itr->second.x - itr->first.x;
+					dy = itr->second.y - itr->second.y;
+
+					if (angle < 0.01) {
+						dal = dax;
+					}
+					else {
+						dal = (dax * ay - day * ax) / angle;
+					}
+					if (angle < 0.01) {
+						dar = day;
+					}
+					else {
+						dar = (dax * ax + day * ay) / angle;
+					}
+					stop_tmp.dal = dal;
+					stop_tmp.dl = (dx * ay - dy * ax) / angle;
+					stop_tmp.dar = dar;
+					stop_tmp.dr = (dx * ax + dy * ay) / angle;
+					stop_tmp.d_pl = itr->second.pl - itr->first.pl;
+				}
+
+			}
+			if (stop_tmp.pl0 > stop_tmp.stoppl) {//bwd
+				//start
+				stop_tmp.rawid = c.base.begin()->rawid;
+				stop_tmp.ax = c.base.begin()->ax;
+				stop_tmp.ay = c.base.begin()->ay;
+				stop_tmp.x = c.base.begin()->x;
+				stop_tmp.y = c.base.begin()->y;
+				stop_tmp.z = c.base.begin()->z;
+				stop_tmp.vph = c.base.begin()->m[0].ph % 10000 + c.base.begin()->m[1].ph % 10000;
+				stop_tmp.vph2 = std::next(c.base.begin(), 1)->m[0].ph % 10000 + std::next(c.base.begin(), 1)->m[1].ph % 10000;
+
+				if (c.base_pair.size() != 0) {
+					auto itr = c.base_pair.begin();
+					ax = itr->first.ax;
+					ay = itr->first.ay;
+					angle = sqrt(ax * ax + ay * ay);
+					dax = itr->second.ax - ax;
+					day = itr->second.ay - ay;
+
+					if (angle < 0.01) {
+						dal = dax;
+					}
+					else {
+						dal = (dax * ay - day * ax) / angle;
+					}
+					if (angle < 0.01) {
+						dar = day;
+					}
+					else {
+						dar = (dax * ax + day * ay) / angle;
+					}
+					stop_tmp.dal = dal;
+					stop_tmp.dl = (dx * ay - dy * ax) / angle;
+					stop_tmp.dar = dar;
+					stop_tmp.dr = (dx * ax + dy * ay) / angle;
+					stop_tmp.d_pl = itr->second.pl - itr->first.pl;
+
+				}
+			}
+
+			stop_tmp.ip = 0;
+			tracks.insert(std::make_pair(stop_tmp.groupid, stop_tmp));
+			use++;
+		}
+	}
 	printf("\t* input fin.\n\t #of track : %d --> %d\n", cnt, use);
 
 }
