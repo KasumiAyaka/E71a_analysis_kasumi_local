@@ -237,12 +237,6 @@ void set_basetrack(std::set<Track>& map) {
 	str_v = StringSplit_with_tab(str);
 
 	std::cout << str_v.size() << std::endl;
-	if (str_v.size() != 27) {
-		std::cout << "argc = " << map.size() << "; 27 is correct." << std::endl;
-		std::cout << "Please input Correct track infomation." << std::endl;
-		return;
-	}
-
 
 	if (str_v.size() == 27) {
 		t.cid = std::stoi(str_v[0]);
