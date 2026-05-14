@@ -189,7 +189,7 @@ int main(int argc, char** argv) {
 	std::cout << "\t #of velist : " << veflg.size() << std::endl;
 
 	ofs.open(file_out_vtx);
-	ofs << "stopflg 0:penetrate/sideout, 2:ecc stop, VEflg 0:remain,  >0:erase(#of matched basetrk)" << std::endl;
+	ofs << "stopflg 0:penetrate/sideout, 2:ecc stop\nVEflg 0:remain,  >0:erase(#of matched basetrk)" << std::endl;
 	ofs << "material 0:water, 1:base, 2:iron, 5:emulsion, -2:penetrate, -3:sideout, -5:same timestamp" << std::endl;
 
 	for (auto ev = set.begin(); ev != set.end(); ev++) {
