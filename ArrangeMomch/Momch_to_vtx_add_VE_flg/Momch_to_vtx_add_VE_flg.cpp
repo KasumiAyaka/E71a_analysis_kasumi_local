@@ -32,6 +32,7 @@ public:
 	int d_pl;
 	int vph2;//’¼‹ß‚ÌŽŸ‚Ìbasetrack
 	double pb;
+	int material;
 };
 class track_pair {
 public:
@@ -42,7 +43,7 @@ public:
 };
 class track_multi {
 public:
-	int eventid, pl;
+	int eventid, pl, material;
 	double x, y, z;
 	std::vector< std::pair<int, stop_track>> trk;
 	std::vector<track_pair>pair;
@@ -189,6 +190,7 @@ int main(int argc, char** argv) {
 
 	ofs.open(file_out_vtx);
 	ofs << "stopflg 0:penetrate/sideout, 2:ecc stop, VEflg 0:remain,  >0:erase(#of matched basetrk)" << std::endl;
+	ofs << "material 0:water, 1:base, 2:iron, 5:emulsion, -2:penetrate, -3:sideout, -5:same timestamp" << std::endl;
 
 	for (auto ev = set.begin(); ev != set.end(); ev++) {
 		auto tks = stop.equal_range(*ev);
@@ -216,6 +218,7 @@ void read_stop_txt(std::vector<Momentum_recon::Event_information>& momch, std::m
 		stop_tmp.stoppl = ev.vertex_pl;
 		stop_tmp.groupid = ev.groupid;
 		stop_tmp.unixtime = ev.unix_time;
+		stop_tmp.material = ev.vertex_material;
 
 		for (auto& c : ev.chains) {
 			cnt++;
@@ -334,6 +337,7 @@ void read_stop_txt_mode2(std::vector<Momentum_recon::Event_information>& momch, 
 		stop_tmp.stoppl = ev.vertex_pl;
 		stop_tmp.groupid = ev.groupid;
 		stop_tmp.unixtime = ev.unix_time;
+		stop_tmp.material = ev.vertex_material;
 
 		for (auto& c : ev.chains) {
 			//std::cout << stop_tmp.groupid<<" "<< c.chainid << std::endl;
@@ -472,6 +476,7 @@ void clustering_2trk_vtx2_ver3(std::multimap<int, stop_track>& tracks, int pl, s
 		for (auto itr1 = tracks.begin(); itr1 != tracks.end(); itr1++) {
 			multi.eventid = itr1->second.groupid;
 			multi.unixtime = utime;
+			multi.material = itr1->second.material;
 			for (auto itr2 = std::next(itr1, 1); itr2 != tracks.end(); itr2++) {
 				matrix_3D::vector_3D pos0, pos1, dir0, dir1;
 				pos0.x = itr1->second.x;
@@ -568,7 +573,8 @@ void clustering_2trk_vtx2_ver3(std::multimap<int, stop_track>& tracks, int pl, s
 
 	for (auto itr0 = ret.begin(); itr0 != ret.end(); itr0++) {
 		ofs << std::right << std::fixed
-			<< std::setw(12) << std::setprecision(0) << itr0->eventid << " "
+			<< std::setw(3) << std::setprecision(0) << itr0->material << " "
+			<< std::setw(6) << std::setprecision(0) << itr0->eventid << " "
 			<< std::setw(12) << std::setprecision(0) << itr0->unixtime << " "
 			<< std::setw(4) << std::setprecision(0) << itr0->pl << " "
 			<< std::setw(4) << std::setprecision(0) << itr0->trk.size() << " "
@@ -697,6 +703,7 @@ void clustering_2trk_vtx2_ver4(std::multimap<int, stop_track>& tracks, int pl, s
 		for (auto itr1 = tracks.begin(); itr1 != tracks.end(); itr1++) {
 			multi.eventid = itr1->second.groupid;
 			multi.unixtime = utime;
+			multi.material = itr1->second.material;
 			for (auto itr2 = std::next(itr1, 1); itr2 != tracks.end(); itr2++) {
 				matrix_3D::vector_3D pos0, pos1, dir0, dir1;
 				pos0.x = itr1->second.x;
@@ -793,7 +800,8 @@ void clustering_2trk_vtx2_ver4(std::multimap<int, stop_track>& tracks, int pl, s
 
 	for (auto itr0 = ret.begin(); itr0 != ret.end(); itr0++) {
 		ofs << std::right << std::fixed
-			<< std::setw(12) << std::setprecision(0) << itr0->eventid << " "
+			<< std::setw(3) << std::setprecision(0) << itr0->material << " "
+			<< std::setw(6) << std::setprecision(0) << itr0->eventid << " "
 			<< std::setw(12) << std::setprecision(0) << itr0->unixtime << " "
 			<< std::setw(4) << std::setprecision(0) << itr0->pl << " "
 			<< std::setw(4) << std::setprecision(0) << itr0->trk.size() << " "
