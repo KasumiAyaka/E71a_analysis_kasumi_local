@@ -354,7 +354,7 @@ void read_stop_txt_mode2(std::vector<Momentum_recon::Event_information>& momch, 
 				stop_tmp.mom = c.ecc_mcs_mom[1];
 				stop_tmp.rng = c.ecc_range_mom[1];
 			}
-			stop_tmp.pb = c.Get_proton_mcs_pb();
+			stop_tmp.pb = c.Get_muon_mcs_pb();
 
 			if (stop_tmp.pl1 <= stop_tmp.stoppl) {//fwd
 				//stop
