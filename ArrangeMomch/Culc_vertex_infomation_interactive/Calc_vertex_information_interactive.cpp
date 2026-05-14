@@ -148,43 +148,77 @@ void set_basetrack(std::vector<std::string>& str_v, std::set<Track>& map) {
 
 	
 	std::cout << str_v.size() << std::endl;
-	if (str_v.size() != 27) {
-		std::cout << "argc = " << map.size() << "; 27 is correct." << std::endl;
+
+	if (str_v.size() == 27) {
+		t.cid = std::stoi(str_v[0]);
+		t.pid = std::stoi(str_v[1]);
+		t.stopflg = std::stoi(str_v[2]);
+		t.veflg1 = std::stoi(str_v[3]);
+		t.veflg2 = std::stoi(str_v[4]);
+		t.veflg3 = std::stoi(str_v[5]);
+		t.nseg = std::stoi(str_v[6]);
+		t.npl = std::stoi(str_v[7]);
+		t.pl0 = std::stoi(str_v[8]);
+		t.pl1 = std::stoi(str_v[9]);
+
+		t.tan = std::stod(str_v[10]);
+		t.rng = std::stod(str_v[11]);
+		t.mcs = std::stod(str_v[12]);
+		t.vph = std::stoi(str_v[13]);
+		t.dpl = std::stoi(str_v[14]);
+		t.vph2 = std::stoi(str_v[15]);
+		t.dal = std::stod(str_v[16]);
+		t.dar = std::stod(str_v[17]);
+		t.dl = std::stod(str_v[18]);
+		t.mu_md = std::stod(str_v[19]);
+		t.mu_dz = std::stod(str_v[20]);
+
+		t.rawid = std::stoi(str_v[21]);
+		t.ax = std::stod(str_v[22]);
+		t.ay = std::stod(str_v[23]);
+		t.x = std::stod(str_v[24]);
+		t.y = std::stod(str_v[25]);
+		t.z = std::stod(str_v[26]);
+	}
+	else if (str_v.size() == 28) {
+		t.cid = std::stoi(str_v[0]);
+		t.pid = std::stoi(str_v[1]);
+		t.stopflg = std::stoi(str_v[2]);
+		t.veflg1 = std::stoi(str_v[3]);
+		t.veflg2 = std::stoi(str_v[4]);
+		t.veflg3 = std::stoi(str_v[5]);
+		t.nseg = std::stoi(str_v[6]);
+		t.npl = std::stoi(str_v[7]);
+		t.pl0 = std::stoi(str_v[8]);
+		t.pl1 = std::stoi(str_v[9]);
+
+		t.tan = std::stod(str_v[10]);
+		t.rng = std::stod(str_v[11]);
+		t.mcs = std::stod(str_v[12]);
+		t.pb = std::stod(str_v[13]);
+		t.vph = std::stoi(str_v[14]);
+		t.dpl = std::stoi(str_v[15]);
+		t.vph2 = std::stoi(str_v[16]);
+		t.dal = std::stod(str_v[17]);
+		t.dar = std::stod(str_v[18]);
+		t.dl = std::stod(str_v[19]);
+		t.mu_md = std::stod(str_v[20]);
+		t.mu_dz = std::stod(str_v[21]);
+
+		t.rawid = std::stoi(str_v[22]);
+		t.ax = std::stod(str_v[23]);
+		t.ay = std::stod(str_v[24]);
+		t.x = std::stod(str_v[25]);
+		t.y = std::stod(str_v[26]);
+		t.z = std::stod(str_v[27]);
+
+	}
+	else {
+		std::cout << "argc = " << map.size() << "; 27 or 28 is correct." << std::endl;
 		std::cout << "Please input Correct track infomation." << std::endl;
 		return;
+
 	}
-
-
-	t.cid = std::stoi(str_v[0]);
-	t.pid = std::stoi(str_v[1]);
-	t.stopflg= std::stoi(str_v[2]);
-	t.veflg1 = std::stoi(str_v[3]);
-	t.veflg2 = std::stoi(str_v[4]);
-	t.veflg3 = std::stoi(str_v[5]);
-	t.nseg = std::stoi(str_v[6]);
-	t.npl = std::stoi(str_v[7]);
-	t.pl0 = std::stoi(str_v[8]);
-	t.pl1 = std::stoi(str_v[9]);
-
-	t.tan = std::stod(str_v[10]);
-	t.mcs = std::stod(str_v[11]);
-	t.rng = std::stod(str_v[12]);
-	t.vph = std::stoi(str_v[13]);
-	t.dpl = std::stoi(str_v[14]);
-	t.vph2 = std::stoi(str_v[15]);
-	t.dal = std::stod(str_v[16]);
-	t.dar = std::stod(str_v[17]);
-	t.dl = std::stod(str_v[18]);
-	t.mu_md = std::stod(str_v[19]);
-	t.mu_dz = std::stod(str_v[20]);
-
-	t.rawid = std::stoi(str_v[21]);
-	t.ax = std::stod(str_v[22]);
-	t.ay = std::stod(str_v[23]);
-	t.x = std::stod(str_v[24]);
-	t.y = std::stod(str_v[25]);
-	t.z = std::stod(str_v[26]);
-	
 	//std::cin >> t.cid >> t.pid >> t.stopflg >> t.veflg >> t.nseg >> t.npl >> t.pl0 >> t.pl1
 	//	>> t.tan >> t.mcs >> t.rng >> t.vph >> t.dpl >> t.vph2 >> t.dal >> t.dl >> t.mu_md >> t.mu_dz
 	//	>> t.rawid >> t.ax >> t.ay >> t.x >> t.y >> t.z;
@@ -210,35 +244,76 @@ void set_basetrack(std::set<Track>& map) {
 	}
 
 
-	t.cid = std::stoi(str_v[0]);
-	t.pid = std::stoi(str_v[1]);
-	t.stopflg = std::stoi(str_v[2]);
-	t.veflg1 = std::stoi(str_v[3]);
-	t.veflg2 = std::stoi(str_v[4]);
-	t.veflg3 = std::stoi(str_v[5]);
-	t.nseg = std::stoi(str_v[6]);
-	t.npl = std::stoi(str_v[7]);
-	t.pl0 = std::stoi(str_v[8]);
-	t.pl1 = std::stoi(str_v[9]);
+	if (str_v.size() == 27) {
+		t.cid = std::stoi(str_v[0]);
+		t.pid = std::stoi(str_v[1]);
+		t.stopflg = std::stoi(str_v[2]);
+		t.veflg1 = std::stoi(str_v[3]);
+		t.veflg2 = std::stoi(str_v[4]);
+		t.veflg3 = std::stoi(str_v[5]);
+		t.nseg = std::stoi(str_v[6]);
+		t.npl = std::stoi(str_v[7]);
+		t.pl0 = std::stoi(str_v[8]);
+		t.pl1 = std::stoi(str_v[9]);
 
-	t.tan = std::stod(str_v[10]);
-	t.mcs = std::stod(str_v[11]);
-	t.rng = std::stod(str_v[12]);
-	t.vph = std::stoi(str_v[13]);
-	t.dpl = std::stoi(str_v[14]);
-	t.vph2 = std::stoi(str_v[15]);
-	t.dal = std::stod(str_v[16]);
-	t.dar = std::stod(str_v[17]);
-	t.dl = std::stod(str_v[18]);
-	t.mu_md = std::stod(str_v[19]);
-	t.mu_dz = std::stod(str_v[20]);
+		t.tan = std::stod(str_v[10]);
+		t.rng = std::stod(str_v[11]);
+		t.mcs = std::stod(str_v[12]);
+		t.vph = std::stoi(str_v[13]);
+		t.dpl = std::stoi(str_v[14]);
+		t.vph2 = std::stoi(str_v[15]);
+		t.dal = std::stod(str_v[16]);
+		t.dar = std::stod(str_v[17]);
+		t.dl = std::stod(str_v[18]);
+		t.mu_md = std::stod(str_v[19]);
+		t.mu_dz = std::stod(str_v[20]);
 
-	t.rawid = std::stoi(str_v[21]);
-	t.ax = std::stod(str_v[22]);
-	t.ay = std::stod(str_v[23]);
-	t.x = std::stod(str_v[24]);
-	t.y = std::stod(str_v[25]);
-	t.z = std::stod(str_v[26]);
+		t.rawid = std::stoi(str_v[21]);
+		t.ax = std::stod(str_v[22]);
+		t.ay = std::stod(str_v[23]);
+		t.x = std::stod(str_v[24]);
+		t.y = std::stod(str_v[25]);
+		t.z = std::stod(str_v[26]);
+	}
+	else if (str_v.size() == 28) {
+		t.cid = std::stoi(str_v[0]);
+		t.pid = std::stoi(str_v[1]);
+		t.stopflg = std::stoi(str_v[2]);
+		t.veflg1 = std::stoi(str_v[3]);
+		t.veflg2 = std::stoi(str_v[4]);
+		t.veflg3 = std::stoi(str_v[5]);
+		t.nseg = std::stoi(str_v[6]);
+		t.npl = std::stoi(str_v[7]);
+		t.pl0 = std::stoi(str_v[8]);
+		t.pl1 = std::stoi(str_v[9]);
+
+		t.tan = std::stod(str_v[10]);
+		t.rng = std::stod(str_v[11]);
+		t.mcs = std::stod(str_v[12]);
+		t.pb = std::stod(str_v[13]);
+		t.vph = std::stoi(str_v[14]);
+		t.dpl = std::stoi(str_v[15]);
+		t.vph2 = std::stoi(str_v[16]);
+		t.dal = std::stod(str_v[17]);
+		t.dar = std::stod(str_v[18]);
+		t.dl = std::stod(str_v[19]);
+		t.mu_md = std::stod(str_v[20]);
+		t.mu_dz = std::stod(str_v[21]);
+
+		t.rawid = std::stoi(str_v[22]);
+		t.ax = std::stod(str_v[23]);
+		t.ay = std::stod(str_v[24]);
+		t.x = std::stod(str_v[25]);
+		t.y = std::stod(str_v[26]);
+		t.z = std::stod(str_v[27]);
+
+	}
+	else {
+		std::cout << "argc = " << map.size() << "; 27 or 28 is correct." << std::endl;
+		std::cout << "Please input Correct track infomation." << std::endl;
+		return;
+
+	}
 
 	//std::cin >> t.cid >> t.pid >> t.stopflg >> t.veflg >> t.nseg >> t.npl >> t.pl0 >> t.pl1
 	//	>> t.tan >> t.mcs >> t.rng >> t.vph >> t.dpl >> t.vph2 >> t.dal >> t.dl >> t.mu_md >> t.mu_dz
@@ -402,35 +477,70 @@ void clustering_2trk_vtx2_ver3(std::set<Track>& tracks) {
 
 		std::getline(std::cin, str);
 		str_v = StringSplit_with_tab(str);
-		t.cid = std::stoi(str_v[0]);
-		t.pid = std::stoi(str_v[1]);
-		t.stopflg = std::stoi(str_v[2]);
-		t.veflg1 = std::stoi(str_v[3]);
-		t.veflg2 = std::stoi(str_v[4]);
-		t.veflg3 = std::stoi(str_v[5]);
-		t.nseg = std::stoi(str_v[6]);
-		t.npl = std::stoi(str_v[7]);
-		t.pl0 = std::stoi(str_v[8]);
-		t.pl1 = std::stoi(str_v[9]);
+		if (str_v.size() == 27) {
+			t.cid = std::stoi(str_v[0]);
+			t.pid = std::stoi(str_v[1]);
+			t.stopflg = std::stoi(str_v[2]);
+			t.veflg1 = std::stoi(str_v[3]);
+			t.veflg2 = std::stoi(str_v[4]);
+			t.veflg3 = std::stoi(str_v[5]);
+			t.nseg = std::stoi(str_v[6]);
+			t.npl = std::stoi(str_v[7]);
+			t.pl0 = std::stoi(str_v[8]);
+			t.pl1 = std::stoi(str_v[9]);
 
-		t.tan = std::stod(str_v[10]);
-		t.mcs = std::stod(str_v[11]);
-		t.rng = std::stod(str_v[12]);
-		t.vph = std::stoi(str_v[13]);
-		t.dpl = std::stoi(str_v[14]);
-		t.vph2 = std::stoi(str_v[15]);
-		t.dal = std::stod(str_v[16]);
-		t.dar = std::stod(str_v[17]);
-		t.dl = std::stod(str_v[18]);
-		t.mu_md = std::stod(str_v[19]);
-		t.mu_dz = std::stod(str_v[20]);
+			t.tan = std::stod(str_v[10]);
+			t.rng = std::stod(str_v[11]);
+			t.mcs = std::stod(str_v[12]);
+			t.vph = std::stoi(str_v[13]);
+			t.dpl = std::stoi(str_v[14]);
+			t.vph2 = std::stoi(str_v[15]);
+			t.dal = std::stod(str_v[16]);
+			t.dar = std::stod(str_v[17]);
+			t.dl = std::stod(str_v[18]);
+			t.mu_md = std::stod(str_v[19]);
+			t.mu_dz = std::stod(str_v[20]);
 
-		t.rawid = std::stoi(str_v[21]);
-		t.ax = std::stod(str_v[22]);
-		t.ay = std::stod(str_v[23]);
-		t.x = std::stod(str_v[24]);
-		t.y = std::stod(str_v[25]);
-		t.z = std::stod(str_v[26]);
+			t.rawid = std::stoi(str_v[21]);
+			t.ax = std::stod(str_v[22]);
+			t.ay = std::stod(str_v[23]);
+			t.x = std::stod(str_v[24]);
+			t.y = std::stod(str_v[25]);
+			t.z = std::stod(str_v[26]);
+		}
+		else if (str_v.size() == 28) {
+			t.cid = std::stoi(str_v[0]);
+			t.pid = std::stoi(str_v[1]);
+			t.stopflg = std::stoi(str_v[2]);
+			t.veflg1 = std::stoi(str_v[3]);
+			t.veflg2 = std::stoi(str_v[4]);
+			t.veflg3 = std::stoi(str_v[5]);
+			t.nseg = std::stoi(str_v[6]);
+			t.npl = std::stoi(str_v[7]);
+			t.pl0 = std::stoi(str_v[8]);
+			t.pl1 = std::stoi(str_v[9]);
+
+			t.tan = std::stod(str_v[10]);
+			t.rng = std::stod(str_v[11]);
+			t.mcs = std::stod(str_v[12]);
+			t.pb = std::stod(str_v[13]);
+			t.vph = std::stoi(str_v[14]);
+			t.dpl = std::stoi(str_v[15]);
+			t.vph2 = std::stoi(str_v[16]);
+			t.dal = std::stod(str_v[17]);
+			t.dar = std::stod(str_v[18]);
+			t.dl = std::stod(str_v[19]);
+			t.mu_md = std::stod(str_v[20]);
+			t.mu_dz = std::stod(str_v[21]);
+
+			t.rawid = std::stoi(str_v[22]);
+			t.ax = std::stod(str_v[23]);
+			t.ay = std::stod(str_v[24]);
+			t.x = std::stod(str_v[25]);
+			t.y = std::stod(str_v[26]);
+			t.z = std::stod(str_v[27]);
+
+		}
 		std::cout << std::endl;
 
 		pos0.x = t.x;
