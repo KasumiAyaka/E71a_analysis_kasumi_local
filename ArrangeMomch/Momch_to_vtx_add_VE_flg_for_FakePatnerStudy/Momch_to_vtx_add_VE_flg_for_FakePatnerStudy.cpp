@@ -236,11 +236,12 @@ void read_stop_txt(std::vector<Momentum_recon::Event_information>& momch, std::m
 			stop_tmp.mom = c.ecc_mcs_mom[0];
 			stop_tmp.rng = c.ecc_range_mom[0];
 			stop_tmp.stop_flg = c.stop_flg;
+			stop_tmp.pb = c.Get_muon_mcs_pb();
 			if (c.particle_flg == 2212) {
 				stop_tmp.mom = c.ecc_mcs_mom[1];
 				stop_tmp.rng = c.ecc_range_mom[1];
+				stop_tmp.pb = c.Get_proton_mcs_pb();
 			}
-			stop_tmp.pb = c.Get_muon_mcs_pb();
 
 			if (stop_tmp.pl1 <= stop_tmp.stoppl) {//fwd
 				//stop
@@ -357,11 +358,12 @@ void read_stop_txt_mode2(std::vector<Momentum_recon::Event_information>& momch, 
 			stop_tmp.mom = c.ecc_mcs_mom[0];
 			stop_tmp.rng = c.ecc_range_mom[0];
 			stop_tmp.stop_flg = c.stop_flg;
+			stop_tmp.pb = c.Get_muon_mcs_pb();
 			if (c.particle_flg == 2212) {
 				stop_tmp.mom = c.ecc_mcs_mom[1];
 				stop_tmp.rng = c.ecc_range_mom[1];
+				stop_tmp.pb = c.Get_proton_mcs_pb();
 			}
-			stop_tmp.pb = c.Get_muon_mcs_pb();
 
 			if (stop_tmp.pl1 <= stop_tmp.stoppl) {//fwd
 				//stop
@@ -962,11 +964,12 @@ void read_muon_mc_txt(std::vector<Momentum_recon::Event_information>& momch, std
 				itr_trk->second.mom = c.ecc_mcs_mom[0];
 				itr_trk->second.rng = c.ecc_range_mom[0];
 				itr_trk->second.stop_flg = c.stop_flg;
+				stop_tmp.pb = c.Get_muon_mcs_pb();
 				if (c.particle_flg == 2212) {
-					itr_trk->second.mom = c.ecc_mcs_mom[1];
-					itr_trk->second.rng = c.ecc_range_mom[1];
+					stop_tmp.mom = c.ecc_mcs_mom[1];
+					stop_tmp.rng = c.ecc_range_mom[1];
+					stop_tmp.pb = c.Get_proton_mcs_pb();
 				}
-				itr_trk->second.pb = c.Get_muon_mcs_pb();
 
 				if (itr_trk->second.pl1 <= itr_trk->second.stoppl) {//fwd
 					//stop
@@ -1086,11 +1089,12 @@ void read_muon_mc_all (std::vector<Momentum_recon::Event_information>& momch, st
 			stop_tmp.mom = c.ecc_mcs_mom[0];
 			stop_tmp.rng = c.ecc_range_mom[0];
 			stop_tmp.stop_flg = c.stop_flg;
+			stop_tmp.pb = c.Get_muon_mcs_pb();
 			if (c.particle_flg == 2212) {
 				stop_tmp.mom = c.ecc_mcs_mom[1];
 				stop_tmp.rng = c.ecc_range_mom[1];
+				stop_tmp.pb = c.Get_proton_mcs_pb();
 			}
-			stop_tmp.pb = c.Get_proton_mcs_pb();
 
 
 			if (stop_tmp.pl1 <= stop_tmp.stoppl) {//fwd

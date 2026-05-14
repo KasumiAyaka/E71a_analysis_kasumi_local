@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
 
 	ofs.open(file_out_vtx);
 	ofs << "stopflg 0:penetrate/sideout, 2:ecc stop\nVEflg 0:remain,  >0:erase(#of matched basetrk)" << std::endl;
-	ofs << "material 0:water, 1:base, 2:iron, 5:emulsion, -2:penetrate, -3:sideout, -5:same timestamp" << std::endl;
+	ofs << "material 0:water, 1:base, 2:iron, 5:emulsion, -2:penetrate, -3:sideout, -5:same timestamp\n" << std::endl;
 
 	for (auto ev = set.begin(); ev != set.end(); ev++) {
 		auto tks = stop.equal_range(*ev);
@@ -234,11 +234,12 @@ void read_stop_txt(std::vector<Momentum_recon::Event_information>& momch, std::m
 			stop_tmp.mom = c.ecc_mcs_mom[0];
 			stop_tmp.rng = c.ecc_range_mom[0];
 			stop_tmp.stop_flg = c.stop_flg;
+			stop_tmp.pb = c.Get_muon_mcs_pb();
 			if (c.particle_flg == 2212) {
 				stop_tmp.mom = c.ecc_mcs_mom[1];
 				stop_tmp.rng = c.ecc_range_mom[1];
+				stop_tmp.pb = c.Get_proton_mcs_pb();
 			}
-			stop_tmp.pb = c.Get_muon_mcs_pb();
 
 			if (stop_tmp.pl1 <= stop_tmp.stoppl) {//fwd
 				//stop
@@ -354,11 +355,12 @@ void read_stop_txt_mode2(std::vector<Momentum_recon::Event_information>& momch, 
 			stop_tmp.mom = c.ecc_mcs_mom[0];
 			stop_tmp.rng = c.ecc_range_mom[0];
 			stop_tmp.stop_flg = c.stop_flg;
+			stop_tmp.pb = c.Get_muon_mcs_pb();
 			if (c.particle_flg == 2212) {
 				stop_tmp.mom = c.ecc_mcs_mom[1];
 				stop_tmp.rng = c.ecc_range_mom[1];
+				stop_tmp.pb = c.Get_proton_mcs_pb();
 			}
-			stop_tmp.pb = c.Get_muon_mcs_pb();
 
 			if (stop_tmp.pl1 <= stop_tmp.stoppl) {//fwd
 				//stop
