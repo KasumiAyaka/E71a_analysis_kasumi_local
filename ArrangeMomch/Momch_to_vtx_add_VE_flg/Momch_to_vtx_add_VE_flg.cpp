@@ -453,7 +453,7 @@ void clustering_2trk_vtx2_ver3(std::multimap<int, stop_track>& tracks, int pl, s
 
 	//rawid,stop
 	std::vector<track_multi> ret;
-	double zrange[2] = { 0,0 };
+	double zrange[2] = { 0,100 };
 	if (pl <= 15 || (pl >= 16 && pl % 2 == 0)) {
 		zrange[0] = -1000;
 	}
@@ -678,7 +678,7 @@ void clustering_2trk_vtx2_ver4(std::multimap<int, stop_track>& tracks, int pl, s
 
 	//rawid,stop
 	std::vector<track_multi> ret;
-	double zrange[2] = { 0,0 };
+	double zrange[2] = { 0,100 };
 	if (pl <= 15 || (pl >= 16 && pl % 2 == 0)) {
 		zrange[0] = -1000;
 	}
