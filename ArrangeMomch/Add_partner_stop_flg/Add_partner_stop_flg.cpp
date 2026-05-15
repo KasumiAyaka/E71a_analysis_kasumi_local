@@ -152,7 +152,7 @@ bool sort_M_base(const mfile0::M_Base& left, const mfile0::M_Base& right) {
 
 int main(int argc, char** argv) {
 	if (argc != 5) {
-		fprintf(stderr, "usage:prg in.momch output.momch out.txt\n");
+		fprintf(stderr, "usage:prg in.momch I:\\NINJA\\E71a\\ECC5 I:\\E71a\\ECC5\Area0\0 output.momch\n");
 		exit(1);
 	}
 	std::string in_momch = argv[1];// input momch
