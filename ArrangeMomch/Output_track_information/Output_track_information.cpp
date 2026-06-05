@@ -106,6 +106,7 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "  mode (default = 0) :  0 = use all track to calcurate vertex point\n");
 		fprintf(stderr, "                      -10 = after manchk\n");
 		fprintf(stderr, "                       -5 = after manchk & rng-mom cut\n");
+		fprintf(stderr, "                       if a trk id charge-sige < mode --> doesn't use to calcurate vtx-point.\n");
 		fprintf(stderr, "  tan_thr (default = 15.0) : cut chains if it's sqrt(ax**2 + ay**2) > tan_thr.\n");
 		fprintf(stderr, "---------------------------------------------------------------------\n");
 		exit(1);
@@ -288,6 +289,10 @@ void clustering_2trk_vtx2_ver2(std::multimap<int, stop_track>& tracks, std::mult
 			utime = itr1->second.unixtime;
 		}
 	}
+	int tnum_all, tnum_use;
+	tnum_use = tracks.size();
+	tnum_all = notuse.size() + tnum_use;
+
 
 	//rawid,stop
 	std::vector<track_multi> ret;
@@ -411,9 +416,11 @@ void clustering_2trk_vtx2_ver2(std::multimap<int, stop_track>& tracks, std::mult
 				<< std::setw(1) << std::setprecision(0) << itr1->second.bunch << " "
 				<< std::setw(3) << std::setprecision(0) << itr0->pl << " "
 				<< std::setw(3) << std::setprecision(0) << itr1->second.vertex_material << " "
-				<< std::setw(3) << std::setprecision(0) << itr0->trk.size() << " "
-				//finalchk後のvtxを構成するtrk数
-				<< std::setw(3) << std::setprecision(0) << itr1->second.ntrk << " "
+				//<< std::setw(3) << std::setprecision(0) << itr0->trk.size() << " "
+				////finalchk後のvtxを構成するtrk数
+				//<< std::setw(3) << std::setprecision(0) << itr1->second.ntrk << " "
+				<< std::setw(3) << std::setprecision(0) << tnum_use << " "
+				<< std::setw(3) << std::setprecision(0) << tnum_all << " "
 				//もともとの
 				<< std::setw(10) << std::setprecision(1) << itr0->x << " "
 				<< std::setw(10) << std::setprecision(1) << itr0->y << " "
@@ -464,8 +471,10 @@ void clustering_2trk_vtx2_ver2(std::multimap<int, stop_track>& tracks, std::mult
 				<< std::setw(1) << std::setprecision(0) << itr2->second.bunch << " "
 				<< std::setw(3) << std::setprecision(0) << itr0->pl << " "
 				<< std::setw(3) << std::setprecision(0) << itr2->second.vertex_material << " "
-				<< std::setw(3) << std::setprecision(0) << itr0->trk.size() << " "//finalchk後のvtxを構成するtrk数
-				<< std::setw(3) << std::setprecision(0) << itr2->second.ntrk << " "//もともとの
+				//<< std::setw(3) << std::setprecision(0) << itr0->trk.size() << " "//finalchk後のvtxを構成するtrk数
+				//<< std::setw(3) << std::setprecision(0) << itr2->second.ntrk << " "//もともとの
+				<< std::setw(3) << std::setprecision(0) << tnum_use << " "
+				<< std::setw(3) << std::setprecision(0) << tnum_all << " "
 				<< std::setw(10) << std::setprecision(1) << itr0->x << " "
 				<< std::setw(10) << std::setprecision(1) << itr0->y << " "
 				<< std::setw(10) << std::setprecision(1) << itr0->z << " "
