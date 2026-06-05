@@ -118,7 +118,8 @@ void read_muon_mc_txt(std::vector<Momentum_recon::Event_information>& momch, std
 int main(int argc, char** argv) {
 	if (argc < 3) {
 		fprintf(stderr, "usage:prg in-mfile.momch out-vtx.txt VElist.txt\n");
-		fprintf(stderr, "usage:prg in-mfile.momch out-vtx.txt VElist.txt\n\t 1 ==> man chk cut\t 2 ==> man chk cut & fin chk cut\n");
+		fprintf(stderr, "usage:prg in-mfile.momch out-vtx.txt VElist.txt [mode]\n");
+		fprintf(stderr, "\t 1 ==> man chk cut\t 2 ==> man chk cut & fin chk cut\n");
 		exit(1);
 	}
 	std::string in_momch = argv[1];
@@ -230,7 +231,7 @@ void read_stop_txt(std::vector<Momentum_recon::Event_information>& momch, std::m
 			stop_tmp.pl0 = c.base.begin()->pl;//dounstream
 			stop_tmp.pl1 = c.base.rbegin()->pl;//upstream
 			stop_tmp.npl = stop_tmp.pl1 - stop_tmp.pl0 + 1;
-			stop_tmp.pid = c.particle_flg;
+			stop_tmp.pid = int(c.particle_flg%10000);
 			stop_tmp.mom = c.ecc_mcs_mom[0];
 			stop_tmp.rng = c.ecc_range_mom[0];
 			stop_tmp.stop_flg = c.stop_flg;
@@ -351,7 +352,7 @@ void read_stop_txt_mode2(std::vector<Momentum_recon::Event_information>& momch, 
 			stop_tmp.pl0 = c.base.begin()->pl;//dounstream
 			stop_tmp.pl1 = c.base.rbegin()->pl;//upstream
 			stop_tmp.npl = stop_tmp.pl1 - stop_tmp.pl0 + 1;
-			stop_tmp.pid = c.particle_flg;
+			stop_tmp.pid = int(c.particle_flg%10000);
 			stop_tmp.mom = c.ecc_mcs_mom[0];
 			stop_tmp.rng = c.ecc_range_mom[0];
 			stop_tmp.stop_flg = c.stop_flg;

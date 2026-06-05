@@ -181,7 +181,7 @@ void read_chain_list(std::string in,std::set<std::pair<int,int>>&set) {
 
 	std::ifstream ifs(in);
 	if (!ifs) {
-		std::cerr << " File open error ! " << std::endl;
+		std::cerr << " File open error ! : " << in << std::endl;
 		std::cerr << in << std::endl;
 		return;
 	}

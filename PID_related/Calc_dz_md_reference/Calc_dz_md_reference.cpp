@@ -120,16 +120,18 @@ void Calc_angle_diff_per_angle(double X, std::string out_txt) {
 		}
 
 
-		for (double dz = -3200; dz < 50;) {
-			if (dz == 0) {
+		//for (double dz = -3200; dz < 50;) {
+		for (double dz = -3200; dz < 100;) {
+				if (dz == 0) {
 				dz -= 10;
 			}
 			double L, L2;
 			L = fabs(dz) * tan;
 			L2 = L / X;
 
-			for (int pbeta = 50; pbeta < 850;) {
-				double dang = (1 / pow(3, 1 / 2)) * (13.6 / pbeta) * pow(L, 1 / 2) * (1 + 0.038 * log(L));// d(\theta_rms)
+			//for (int pbeta = 50; pbeta < 850;) {
+			for (int pbeta = 10; pbeta < 2100;) {
+					double dang = (1 / pow(3, 1 / 2)) * (13.6 / pbeta) * pow(L, 1 / 2) * (1 + 0.038 * log(L));// d(\theta_rms)
 
 
 				double md_exp, L_scat, L_meas;
@@ -150,6 +152,7 @@ void Calc_angle_diff_per_angle(double X, std::string out_txt) {
 					<< std::setw(10) << std::setprecision(1) << L_meas << " "
 					<< std::setw(10) << std::setprecision(1) << md_exp << " "
 					<< std::endl;
+				if (pbeta == 10)pbeta = 0;
 				pbeta = pbeta + 50;
 			}
 			dz += 50;
