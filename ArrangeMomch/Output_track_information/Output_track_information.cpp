@@ -33,6 +33,7 @@ public:
 	double ax, ay, x, y, z;
 	double ip;
 	double md, oa;// muonとの
+	double RNG, RNGerr[2];
 };
 class track_pair {
 public:
@@ -98,16 +99,24 @@ double minimum_distance_fixed(matrix_3D::vector_3D pos0, matrix_3D::vector_3D po
 void read_stop_txt(std::vector<Momentum_recon::Event_information>& momch, std::multimap<int, stop_track>& tracks, double tan_thr);
 void clustering_2trk_vtx2_ver2(std::multimap<int, stop_track>& tracks, std::multimap<int, stop_track>& notuse, int pl, std::ofstream& ofs, int ecc);
 void clustering_2trk_vtx2(std::multimap<int, stop_track>& tracks, int pl, std::ofstream& ofs, int ecc);
+void clustering_2trk_vtx2_ver2_with_ecc_range_mom(std::multimap<int, stop_track>& tracks, std::multimap<int, stop_track>& notuse, int pl, std::ofstream& ofs, int ecc);
+void clustering_2trk_vtx2_with_ecc_range_mom(std::multimap<int, stop_track>& tracks, int pl, std::ofstream& ofs, int ecc);
 
 int main(int argc, char** argv) {
 	if (argc < 3) {
-		fprintf(stderr, "usage:prg in-momch.momch out-vtx.txt #ECC [mode = 0] [tan_thr = 15.0]\n");
+		fprintf(stderr, "usage:prg in-momch.momch out-vtx.txt #ECC [mode = 0] [outputmode] [tan_thr = 15.0]\n");
 		fprintf(stderr, "---------------------------------------------------------------------\n");
-		fprintf(stderr, "  mode (default = 0) :  0 = use all track to calcurate vertex point\n");
-		fprintf(stderr, "                      -10 = after manchk\n");
-		fprintf(stderr, "                       -5 = after manchk & rng-mom cut\n");
-		fprintf(stderr, "                       if a trk id charge-sige < mode --> doesn't use to calcurate vtx-point.\n");
-		fprintf(stderr, "  tan_thr (default = 15.0) : cut chains if it's sqrt(ax**2 + ay**2) > tan_thr.\n");
+		fprintf(stderr, " * mode (default = 0) : \n");
+		fprintf(stderr, "      0 = use all track to calcurate vertex point\n");
+		fprintf(stderr, "     -5 = after manchk\n");
+		fprintf(stderr, "     -1 = after manchk & rng-mom cut\n");
+		fprintf(stderr, "     (charge-sign:1/-1-->real track, -5-->reject by Range-momentum cut, -10-->reject by Manual-check)\n");
+		fprintf(stderr, "    if a trk's charge-sign < mode ==> doesn't use to calcurate vtx-point.\n\n");
+		fprintf(stderr, " * output mode (default = 0) : \n");
+		fprintf(stderr, "      0 = old type format\n");
+		fprintf(stderr, "      1 = output ecc range momentum\n");
+		fprintf(stderr, "                       \n");
+		fprintf(stderr, " * tan_thr (default = 15.0) : cut chains if it's sqrt(ax**2 + ay**2) > tan_thr.\n");
 		fprintf(stderr, "---------------------------------------------------------------------\n");
 		exit(1);
 	}
@@ -115,12 +124,16 @@ int main(int argc, char** argv) {
 	std::string out_txt = argv[2];
 	int ecc = std::stoi(argv[3]);
 	int mode = 0;
-	if (argc == 5) {
+	if (argc > 4) {
 		mode = std::stoi(argv[4]);
 	}
+	int output_mode = 0;
+	if (argc > 5) {
+		output_mode = std::stoi(argv[5]);
+	}
 	double tan_thr = 15.0;
-	if (argc == 6) {
-		tan_thr = std::stod(argv[5]);
+	if (argc > 6) {
+		tan_thr = std::stod(argv[6]);
 	}
 
 	//read momch
@@ -141,6 +154,9 @@ int main(int argc, char** argv) {
 	}
 	std::cout << set.size() << std::endl;
 
+	int anglecuttrknum = 0;
+	int cuttrknum = 0;
+	int remain = 0;
 	ofs.open(out_txt);
 	if (mode != 0) {// apply partner cut
 		for (auto ev = set.begin(); ev != set.end(); ev++) {
@@ -152,25 +168,41 @@ int main(int argc, char** argv) {
 					<< std::setw(5) << std::setprecision(0) << *ev << " "
 					<< std::setw(5) << std::setprecision(0) << itr0->second.chainid << " "
 					<< std::setw(3) << std::setprecision(0) << itr0->second.charge;
-					if (itr0->second.pid == 13) {
+				if (itr0->second.pid == 13) {
 					rid.insert(std::make_pair(itr0->second.rawid, itr0->second));
 					std::cout << std::endl;
 				}
 				else {
-					if (itr0->second.charge < mode) {
-						//muon以外でchargeはmanual checkの結果
-						// -10 -> manchk
-						// - 5 -> rng-mom
+					if (itr0->second.ax * itr0->second.ax + itr0->second.ay * itr0->second.ay > tan_thr * tan_thr) {
+						// angle cut
 						all.insert(std::make_pair(itr0->second.chainid, itr0->second));
-						std::cout << " -> This chain doesn't use to calcurate vertex point." << std::endl;
+						std::cout << " -> This chain doesn't use to calcurate vertex point.(angle)" << std::endl;
+						anglecuttrknum++;
 					}
 					else {
-						rid.insert(std::make_pair(itr0->second.rawid, itr0->second));
-						std::cout << std::endl;
+						if (itr0->second.charge < mode) {
+							//muon以外でchargeはmanual checkの結果
+							// -10 -> manchk
+							// - 5 -> rng-mom
+							all.insert(std::make_pair(itr0->second.chainid, itr0->second));
+							std::cout << " -> This chain doesn't use to calcurate vertex point." << std::endl;
+							cuttrknum++;
+						}
+						else {
+							rid.insert(std::make_pair(itr0->second.rawid, itr0->second));
+							std::cout << std::endl;
+							remain++;
+						}
 					}
 				}
 			}
-			clustering_2trk_vtx2_ver2(rid, all, rid.begin()->second.vpl, ofs, ecc);
+
+			if (output_mode > 0) {
+				clustering_2trk_vtx2_ver2_with_ecc_range_mom(rid, all, rid.begin()->second.vpl, ofs, ecc);
+			}
+			else {
+				clustering_2trk_vtx2_ver2(rid, all, rid.begin()->second.vpl, ofs, ecc);
+			}
 			rid.clear();
 		}
 	}
@@ -184,14 +216,31 @@ int main(int argc, char** argv) {
 					<< std::setw(5) << std::setprecision(0) << *ev << " "
 					<< std::setw(5) << std::setprecision(0) << itr0->second.chainid << " "
 					<< std::setw(3) << std::setprecision(0) << itr0->second.charge;
-				rid.insert(std::make_pair(itr0->second.rawid, itr0->second));
+				if (itr0->second.ax * itr0->second.ax + itr0->second.ay * itr0->second.ay > tan_thr * tan_thr) {
+					std::cout << " -> This chain doesn't use to calcurate vertex point.(angle)" << std::endl;
+					anglecuttrknum++;
+					// angle cut
+				}
+				else {
+					rid.insert(std::make_pair(itr0->second.rawid, itr0->second));
+					remain++;
+				}
 			}
-			clustering_2trk_vtx2(rid, rid.begin()->second.vpl, ofs, ecc);
+			if (output_mode > 0) {
+				clustering_2trk_vtx2_with_ecc_range_mom(rid, rid.begin()->second.vpl, ofs, ecc);
+			}
+			else {
+				clustering_2trk_vtx2(rid, rid.begin()->second.vpl, ofs, ecc);
+
+			}
 			rid.clear();
 		}
 
 	}
 
+	std::cout << " Total track = " << stop.size() << std::endl;
+	std::cout << " * # of Rejected track by Angle-Cut         : " << anglecuttrknum << " ( " << stop.size() << "-->" << remain + cuttrknum << ")" << std::endl;
+	std::cout << " * # of Rejected track by ManChk/RngMom Cut : " << cuttrknum << " ( " << stop.size() - anglecuttrknum << "-->" << remain << ")" << std::endl;
 }
 
 void read_stop_txt(std::vector<Momentum_recon::Event_information>& momch, std::multimap<int, stop_track>& tracks, double tan_thr) {
@@ -219,13 +268,21 @@ void read_stop_txt(std::vector<Momentum_recon::Event_information>& momch, std::m
 			stop_tmp.MCS = c.ecc_mcs_mom[0];//assume mu 
 			stop_tmp.MCSerr[0] = c.ecc_mcs_mom_error[0][0];
 			stop_tmp.MCSerr[1] = c.ecc_mcs_mom_error[0][1];
+			stop_tmp.RNG = c.ecc_range_mom[0];//assume mu 
+			stop_tmp.RNGerr[0] = c.ecc_range_mom_error[0][0];
+			stop_tmp.RNGerr[1] = c.ecc_range_mom_error[0][1];
+			stop_tmp.pb = c.Get_muon_mcs_pb();
 			if (c.particle_flg == 2212) {
 				stop_tmp.MCS = c.ecc_mcs_mom[1];//assume p
 				stop_tmp.MCSerr[0] = c.ecc_mcs_mom_error[1][0];
 				stop_tmp.MCSerr[1] = c.ecc_mcs_mom_error[1][1];
+				stop_tmp.RNG = c.ecc_range_mom[1];//assume mu 
+				stop_tmp.RNGerr[0] = c.ecc_range_mom_error[1][0];
+				stop_tmp.RNGerr[1] = c.ecc_range_mom_error[1][1];
 				//c.ecc_mcs_mom_error[1][0]//+ [1][1] //-
+				stop_tmp.pb = c.Get_proton_mcs_pb();
 			}
-			stop_tmp.pb = c.Get_muon_mcs_pb();
+
 			stop_tmp.BMmomflg = c.bm_range_mom_error[0];
 			stop_tmp.BMrng = c.bm_range_mom;
 			stop_tmp.BMrngerr[0] = c.bm_range_mom_error[0];
@@ -268,17 +325,17 @@ void read_stop_txt(std::vector<Momentum_recon::Event_information>& momch, std::m
 			stop_tmp.md = 0;
 			stop_tmp.oa = 0;
 
-			if (sqrt(stop_tmp.ax * stop_tmp.ax + stop_tmp.ay * stop_tmp.ay) <= tan_thr) {//angle cut
+//			if (sqrt(stop_tmp.ax * stop_tmp.ax + stop_tmp.ay * stop_tmp.ay) <= tan_thr) {//angle cut
 				tracks.insert(std::make_pair(stop_tmp.groupid, stop_tmp));
-				cutnum++;
-			}
+//				cutnum++;
+//			}
 
 		}
 		cnt++;
 	}
 
 	//printf("input fin %d track\n", cnt);
-	std::cout << " * Angle Cut : " << cnt << "-->" << cutnum << std::endl;
+//	std::cout << " * Angle Cut : " << cnt << "-->" << cutnum << std::endl;
 }
 
 void clustering_2trk_vtx2_ver2(std::multimap<int, stop_track>& tracks, std::multimap<int, stop_track>& notuse, int pl, std::ofstream& ofs, int ecc) {
@@ -520,7 +577,6 @@ void clustering_2trk_vtx2_ver2(std::multimap<int, stop_track>& tracks, std::mult
 
 }
 
-
 void clustering_2trk_vtx2(std::multimap<int, stop_track>& tracks, int pl, std::ofstream& ofs, int ecc) {
 	double refz = 0; int utime;
 	for (auto itr1 = tracks.begin(); itr1 != tracks.end(); itr1++) {
@@ -695,6 +751,439 @@ void clustering_2trk_vtx2(std::multimap<int, stop_track>& tracks, int pl, std::o
 
 				<< std::endl;
 			
+		}
+	}
+
+
+}
+
+
+
+
+
+void clustering_2trk_vtx2_ver2_with_ecc_range_mom(std::multimap<int, stop_track>& tracks, std::multimap<int, stop_track>& notuse, int pl, std::ofstream& ofs, int ecc) {
+	double refz = 0; int utime;
+	for (auto itr1 = tracks.begin(); itr1 != tracks.end(); itr1++) {
+		if (itr1->second.chainid == 0) {
+			refz = itr1->second.z;
+			utime = itr1->second.unixtime;
+		}
+	}
+	int tnum_all, tnum_use;
+	tnum_use = tracks.size();
+	tnum_all = notuse.size() + tnum_use;
+
+
+	//rawid,stop
+	std::vector<track_multi> ret;
+	double zrange[2] = { 0,0 };
+	if (pl <= 15 || (pl >= 16 && pl % 2 == 0)) {
+		zrange[0] = -1000;
+	}
+	else if (pl % 2 == 1) {
+		zrange[0] = -3200; //3500->3200
+	}
+
+	double extra[2];
+	track_multi multi;
+	multi.pl = pl;
+	//全2trkのmd計算
+	std::cout << tracks.size() << std::endl;
+	if (tracks.size() != 1) {
+		for (auto itr1 = tracks.begin(); itr1 != tracks.end(); itr1++) {
+			multi.eventid = itr1->second.groupid;
+			multi.unixtime = utime;
+			for (auto itr2 = std::next(itr1, 1); itr2 != tracks.end(); itr2++) {
+				matrix_3D::vector_3D pos0, pos1, dir0, dir1;
+				pos0.x = itr1->second.x;
+				pos0.y = itr1->second.y;
+				pos0.z = itr1->second.z;
+				pos1.x = itr2->second.x;
+				pos1.y = itr2->second.y;
+				pos1.z = itr2->second.z;
+				dir0.x = itr1->second.ax;
+				dir0.y = itr1->second.ay;
+				dir0.z = 1;
+				dir1.x = itr2->second.ax;
+				dir1.y = itr2->second.ay;
+				dir1.z = 1;
+
+				// pos0を基準にzrangeの範囲内で最近接距離をとる位置(extra)を探索
+				double md = minimum_distance_fixed(pos0, pos1, dir0, dir1, zrange, extra, refz);
+				track_pair pair_tmp;
+				matrix_3D::vector_3D extra0 = addition(pos0, const_multiple(dir0, extra[0]));
+				matrix_3D::vector_3D extra1 = addition(pos1, const_multiple(dir1, extra[1]));
+
+				pair_tmp.x = (extra0.x + extra1.x) / 2;
+				pair_tmp.y = (extra0.y + extra1.y) / 2;
+				pair_tmp.z = (extra0.z + extra1.z) / 2;
+				pair_tmp.dz = pair_tmp.z - refz;
+				pair_tmp.eventid = multi.eventid;
+				pair_tmp.md = md;
+				pair_tmp.oa = matrix_3D::opening_angle(dir0, dir1);
+				if (itr1->second.pid != 13 && itr2->second.pid == 13) {
+					itr1->second.md = md;
+					itr1->second.oa = pair_tmp.oa;
+				}
+				if (itr2->second.pid != 13 && itr1->second.pid == 13) {
+					itr2->second.md = md;
+					itr2->second.oa = pair_tmp.oa;
+				}
+				pair_tmp.t[0] = itr1->second;
+				pair_tmp.t[1] = itr2->second;
+
+				multi.pair.push_back(pair_tmp);
+			}
+		}
+
+
+		matrix_3D::vector_3D p_vtx, pos, dir;
+		tkey k;
+		//加重平均でvtx pointの決定
+		multi.x = 0;
+		multi.y = 0;
+		multi.z = 0;
+		for (auto itr = multi.pair.begin(); itr != multi.pair.end(); itr++) {
+			multi.x += itr->x;
+			multi.y += itr->y;
+			multi.z += itr->z;
+		}
+		multi.x = multi.x / multi.pair.size();
+		multi.y = multi.y / multi.pair.size();
+		multi.z = multi.z / multi.pair.size();
+		multi.dz = multi.z - refz;
+		//各trkに対してIPの計算
+		for (auto itr = tracks.begin(); itr != tracks.end(); itr++) {
+			matrix_3D::vector_3D pos0, pos1, dir0, dir1;
+			pos0.x = itr->second.x;
+			pos0.y = itr->second.y;
+			pos0.z = itr->second.z;
+			pos1.x = multi.x;
+			pos1.y = multi.y;
+			pos1.z = multi.z;
+			dir0.x = itr->second.ax;
+			dir0.y = itr->second.ay;
+			dir0.z = 1;
+			itr->second.ip = matrix_3D::inpact_parameter(pos0, dir0, pos1);
+			//k.eid = itr->second.groupid;
+			multi.trk.push_back(std::make_pair(itr->first, itr->second));
+		}
+		ret.push_back(multi);
+	}
+	else {
+		for (auto itr1 = tracks.begin(); itr1 != tracks.end(); itr1++) {
+			multi.eventid = itr1->second.groupid;
+			multi.unixtime = utime;
+			itr1->second.ip = 0;
+			multi.trk.push_back(std::make_pair(itr1->first, itr1->second));
+			track_pair pair_tmp = { 0 };
+
+			multi.pair.push_back(pair_tmp);
+		}
+		multi.dz = -20000;
+
+		ret.push_back(multi);
+
+	}
+
+	for (auto itr0 = ret.begin(); itr0 != ret.end(); itr0++) {
+		for (auto itr1 = itr0->trk.begin(); itr1 != itr0->trk.end(); itr1++) {
+			ofs << std::right << std::fixed
+				// information of vertex
+				<< std::setw(1) << std::setprecision(0) << ecc << " "
+				<< std::setw(5) << std::setprecision(0) << itr0->eventid << " "
+				<< std::setw(10) << std::setprecision(0) << itr0->unixtime << " "
+				<< std::setw(1) << std::setprecision(0) << itr1->second.bunch << " "
+				<< std::setw(3) << std::setprecision(0) << itr0->pl << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.vertex_material << " "
+				//<< std::setw(3) << std::setprecision(0) << itr0->trk.size() << " "
+				////finalchk後のvtxを構成するtrk数
+				//<< std::setw(3) << std::setprecision(0) << itr1->second.ntrk << " "
+				<< std::setw(3) << std::setprecision(0) << tnum_use << " "
+				<< std::setw(3) << std::setprecision(0) << tnum_all << " "
+				//もともとの
+				<< std::setw(10) << std::setprecision(1) << itr0->x << " "
+				<< std::setw(10) << std::setprecision(1) << itr0->y << " "
+				<< std::setw(10) << std::setprecision(1) << itr0->z << " "
+				<< std::setw(8) << std::setprecision(1) << itr0->dz << " "
+				// information of chain
+				<< std::setw(3) << std::setprecision(0) << itr1->second.chainid << " "
+				<< std::setw(4) << std::setprecision(0) << itr1->second.pid << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.stopflg << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.charge << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.MCS << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.MCSerr[0] << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.MCSerr[1] << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.RNG << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.RNGerr[0] << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.RNGerr[1] << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.BMmomflg << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.BMrng << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.BMrngerr[0] << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.BMrngerr[1] << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.BMcurv << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.BMcurverr[0] << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.BMcurverr[1] << " "
+				<< std::setw(9) << std::setprecision(4) << itr1->second.mulikelihood << " "
+				<< std::setw(9) << std::setprecision(4) << itr1->second.pliklihoood << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.pb << " "
+				// information of trk
+				<< std::setw(3) << std::setprecision(0) << itr1->second.nseg << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.npl << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.pl0 << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.pl1 << " "
+				<< std::setw(10) << std::setprecision(0) << itr1->second.rawid << " "
+				<< std::setw(6) << std::setprecision(0) << itr1->second.vph << " "
+				<< std::setw(7) << std::setprecision(4) << itr1->second.ax << " "
+				<< std::setw(7) << std::setprecision(4) << itr1->second.ay << " "
+				<< std::setw(10) << std::setprecision(1) << itr1->second.x << " "
+				<< std::setw(10) << std::setprecision(1) << itr1->second.y << " "
+				<< std::setw(10) << std::setprecision(1) << itr1->second.z << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.ip << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.md << " "
+				<< std::setw(8) << std::setprecision(4) << itr1->second.oa << " "
+
+				<< std::endl;
+
+		}
+		for (auto itr2 = notuse.begin(); itr2 != notuse.end(); itr2++) {
+			// information of vertex
+			ofs << std::setw(1) << std::setprecision(0) << ecc << " "
+				<< std::setw(5) << std::setprecision(0) << itr0->eventid << " "
+				<< std::setw(10) << std::setprecision(0) << itr0->unixtime << " "
+				<< std::setw(1) << std::setprecision(0) << itr2->second.bunch << " "
+				<< std::setw(3) << std::setprecision(0) << itr0->pl << " "
+				<< std::setw(3) << std::setprecision(0) << itr2->second.vertex_material << " "
+				//<< std::setw(3) << std::setprecision(0) << itr0->trk.size() << " "//finalchk後のvtxを構成するtrk数
+				//<< std::setw(3) << std::setprecision(0) << itr2->second.ntrk << " "//もともとの
+				<< std::setw(3) << std::setprecision(0) << tnum_use << " "
+				<< std::setw(3) << std::setprecision(0) << tnum_all << " "
+				<< std::setw(10) << std::setprecision(1) << itr0->x << " "
+				<< std::setw(10) << std::setprecision(1) << itr0->y << " "
+				<< std::setw(10) << std::setprecision(1) << itr0->z << " "
+				<< std::setw(8) << std::setprecision(1) << itr0->dz << " "
+				// information of chain
+				<< std::setw(3) << std::setprecision(0) << itr2->second.chainid << " "
+				<< std::setw(4) << std::setprecision(0) << itr2->second.pid << " "
+				<< std::setw(3) << std::setprecision(0) << itr2->second.stopflg << " "
+				<< std::setw(3) << std::setprecision(0) << itr2->second.charge << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.MCS << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.MCSerr[0] << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.MCSerr[1] << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.RNG << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.RNGerr[0] << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.RNGerr[1] << " "
+				<< std::setw(3) << std::setprecision(0) << itr2->second.BMmomflg << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.BMrng << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.BMrngerr[0] << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.BMrngerr[1] << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.BMcurv << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.BMcurverr[0] << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.BMcurverr[1] << " "
+				<< std::setw(9) << std::setprecision(4) << itr2->second.mulikelihood << " "
+				<< std::setw(9) << std::setprecision(4) << itr2->second.pliklihoood << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.pb << " "
+				// information of trk
+				<< std::setw(3) << std::setprecision(0) << itr2->second.nseg << " "
+				<< std::setw(3) << std::setprecision(0) << itr2->second.npl << " "
+				<< std::setw(3) << std::setprecision(0) << itr2->second.pl0 << " "
+				<< std::setw(3) << std::setprecision(0) << itr2->second.pl1 << " "
+				<< std::setw(10) << std::setprecision(0) << itr2->second.rawid << " "
+				<< std::setw(6) << std::setprecision(0) << itr2->second.vph << " "
+				<< std::setw(7) << std::setprecision(4) << itr2->second.ax << " "
+				<< std::setw(7) << std::setprecision(4) << itr2->second.ay << " "
+				<< std::setw(10) << std::setprecision(1) << itr2->second.x << " "
+				<< std::setw(10) << std::setprecision(1) << itr2->second.y << " "
+				<< std::setw(10) << std::setprecision(1) << itr2->second.z << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.ip << " "
+				<< std::setw(8) << std::setprecision(1) << itr2->second.md << " "
+				<< std::setw(8) << std::setprecision(4) << itr2->second.oa << " "
+
+				<< std::endl;
+		}
+	}
+
+
+}
+
+
+void clustering_2trk_vtx2_with_ecc_range_mom(std::multimap<int, stop_track>& tracks, int pl, std::ofstream& ofs, int ecc) {
+	double refz = 0; int utime;
+	for (auto itr1 = tracks.begin(); itr1 != tracks.end(); itr1++) {
+		if (itr1->second.chainid == 0) {
+			refz = itr1->second.z;
+			utime = itr1->second.unixtime;
+		}
+	}
+
+	//rawid,stop
+	std::vector<track_multi> ret;
+	double zrange[2] = { 0,0 };
+	if (pl <= 15 || (pl >= 16 && pl % 2 == 0)) {
+		zrange[0] = -1000;
+	}
+	else if (pl % 2 == 1) {
+		zrange[0] = -3200; //3500->3200
+	}
+
+	double extra[2];
+	track_multi multi;
+	multi.pl = pl;
+	//全2trkのmd計算
+	std::cout << tracks.size() << std::endl;
+	if (tracks.size() != 1) {
+		for (auto itr1 = tracks.begin(); itr1 != tracks.end(); itr1++) {
+			multi.eventid = itr1->second.groupid;
+			multi.unixtime = utime;
+			for (auto itr2 = std::next(itr1, 1); itr2 != tracks.end(); itr2++) {
+				matrix_3D::vector_3D pos0, pos1, dir0, dir1;
+				pos0.x = itr1->second.x;
+				pos0.y = itr1->second.y;
+				pos0.z = itr1->second.z;
+				pos1.x = itr2->second.x;
+				pos1.y = itr2->second.y;
+				pos1.z = itr2->second.z;
+				dir0.x = itr1->second.ax;
+				dir0.y = itr1->second.ay;
+				dir0.z = 1;
+				dir1.x = itr2->second.ax;
+				dir1.y = itr2->second.ay;
+				dir1.z = 1;
+
+				// pos0を基準にzrangeの範囲内で最近接距離をとる位置(extra)を探索
+				double md = minimum_distance_fixed(pos0, pos1, dir0, dir1, zrange, extra, refz);
+				track_pair pair_tmp;
+				matrix_3D::vector_3D extra0 = addition(pos0, const_multiple(dir0, extra[0]));
+				matrix_3D::vector_3D extra1 = addition(pos1, const_multiple(dir1, extra[1]));
+
+				pair_tmp.x = (extra0.x + extra1.x) / 2;
+				pair_tmp.y = (extra0.y + extra1.y) / 2;
+				pair_tmp.z = (extra0.z + extra1.z) / 2;
+				pair_tmp.dz = pair_tmp.z - refz;
+				pair_tmp.eventid = multi.eventid;
+				pair_tmp.md = md;
+				pair_tmp.oa = matrix_3D::opening_angle(dir0, dir1);
+				if (itr1->second.pid != 13 && itr2->second.pid == 13) {
+					itr1->second.md = pair_tmp.md;
+					itr1->second.oa = pair_tmp.oa;
+				}
+				if (itr2->second.pid != 13 && itr1->second.pid == 13) {
+					itr2->second.md = pair_tmp.md;
+					itr2->second.oa = pair_tmp.oa;
+				}
+				pair_tmp.t[0] = itr1->second;
+				pair_tmp.t[1] = itr2->second;
+				multi.pair.push_back(pair_tmp);
+			}
+		}
+
+
+		matrix_3D::vector_3D p_vtx, pos, dir;
+		tkey k;
+		//加重平均でvtx pointの決定
+		multi.x = 0;
+		multi.y = 0;
+		multi.z = 0;
+		for (auto itr = multi.pair.begin(); itr != multi.pair.end(); itr++) {
+			multi.x += itr->x;
+			multi.y += itr->y;
+			multi.z += itr->z;
+		}
+		multi.x = multi.x / multi.pair.size();
+		multi.y = multi.y / multi.pair.size();
+		multi.z = multi.z / multi.pair.size();
+		multi.dz = multi.z - refz;
+		//各trkに対してIPの計算
+		for (auto itr = tracks.begin(); itr != tracks.end(); itr++) {
+			matrix_3D::vector_3D pos0, pos1, dir0, dir1;
+			pos0.x = itr->second.x;
+			pos0.y = itr->second.y;
+			pos0.z = itr->second.z;
+			pos1.x = multi.x;
+			pos1.y = multi.y;
+			pos1.z = multi.z;
+			dir0.x = itr->second.ax;
+			dir0.y = itr->second.ay;
+			dir0.z = 1;
+			itr->second.ip = matrix_3D::inpact_parameter(pos0, dir0, pos1);
+			//k.eid = itr->second.groupid;
+			multi.trk.push_back(std::make_pair(itr->first, itr->second));
+		}
+		ret.push_back(multi);
+	}
+	else {
+		for (auto itr1 = tracks.begin(); itr1 != tracks.end(); itr1++) {
+			multi.eventid = itr1->second.groupid;
+			multi.unixtime = utime;
+			itr1->second.ip = 0;
+			multi.trk.push_back(std::make_pair(itr1->first, itr1->second));
+			track_pair pair_tmp = { 0 };
+
+			multi.pair.push_back(pair_tmp);
+		}
+		multi.dz = -20000;
+
+		ret.push_back(multi);
+
+	}
+
+	for (auto itr0 = ret.begin(); itr0 != ret.end(); itr0++) {
+		for (auto itr1 = itr0->trk.begin(); itr1 != itr0->trk.end(); itr1++) {
+			ofs << std::right << std::fixed
+				// information of vertex
+				<< std::setw(1) << std::setprecision(0) << ecc << " "
+				<< std::setw(5) << std::setprecision(0) << itr0->eventid << " "
+				<< std::setw(10) << std::setprecision(0) << itr0->unixtime << " "
+				<< std::setw(1) << std::setprecision(0) << itr1->second.bunch << " "
+				<< std::setw(3) << std::setprecision(0) << itr0->pl << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.vertex_material << " "
+				<< std::setw(3) << std::setprecision(0) << itr0->trk.size() << " "
+				//finalchk後のvtxを構成するtrk数
+				<< std::setw(3) << std::setprecision(0) << itr1->second.ntrk << " "
+				//もともとの
+				<< std::setw(10) << std::setprecision(1) << itr0->x << " "
+				<< std::setw(10) << std::setprecision(1) << itr0->y << " "
+				<< std::setw(10) << std::setprecision(1) << itr0->z << " "
+				<< std::setw(8) << std::setprecision(1) << itr0->dz << " "
+				// information of chain
+				<< std::setw(3) << std::setprecision(0) << itr1->second.chainid << " "
+				<< std::setw(4) << std::setprecision(0) << itr1->second.pid << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.stopflg << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.charge << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.MCS << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.MCSerr[0] << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.MCSerr[1] << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.RNG << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.RNGerr[0] << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.RNGerr[1] << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.BMmomflg << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.BMrng << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.BMrngerr[0] << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.BMrngerr[1] << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.BMcurv << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.BMcurverr[0] << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.BMcurverr[1] << " "
+				<< std::setw(9) << std::setprecision(4) << itr1->second.mulikelihood << " "
+				<< std::setw(9) << std::setprecision(4) << itr1->second.pliklihoood << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.pb << " "
+				// information of trk
+				<< std::setw(3) << std::setprecision(0) << itr1->second.nseg << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.npl << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.pl0 << " "
+				<< std::setw(3) << std::setprecision(0) << itr1->second.pl1 << " "
+				<< std::setw(10) << std::setprecision(0) << itr1->second.rawid << " "
+				<< std::setw(6) << std::setprecision(0) << itr1->second.vph << " "
+				<< std::setw(7) << std::setprecision(4) << itr1->second.ax << " "
+				<< std::setw(7) << std::setprecision(4) << itr1->second.ay << " "
+				<< std::setw(10) << std::setprecision(1) << itr1->second.x << " "
+				<< std::setw(10) << std::setprecision(1) << itr1->second.y << " "
+				<< std::setw(10) << std::setprecision(1) << itr1->second.z << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.ip << " "
+				<< std::setw(8) << std::setprecision(1) << itr1->second.md << " "
+				<< std::setw(8) << std::setprecision(4) << itr1->second.oa << " "
+
+				<< std::endl;
+
 		}
 	}
 
