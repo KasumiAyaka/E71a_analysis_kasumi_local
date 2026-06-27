@@ -29,6 +29,7 @@ public:
 	double mom, mulikelihood, pliklihoood,weight;
 	double vx, vy, vz;//for drbag
 	int ntrk;
+	int stopflg;
 };
 class track_pair {
 public:
@@ -209,13 +210,13 @@ void read_stop_txt(std::string in_momch, std::multimap<tkey, stop_track>& tracks
 				//recon
 				//std::cout << "  chain header " << std::stoi(str_v[2]) << std::endl;
 				stop_tmp.chainid = std::stoi(str_v[0]);
+				stop_tmp.stopflg = std::stoi(str_v[1]);
 				stop_tmp.pid = std::stoi(str_v[2]);
 				dflg = std::stoi(str_v[3]);
 				stop_tmp.mulikelihood = std::stod(str_v[23]);
 				stop_tmp.pliklihoood = std::stod(str_v[24]);
 				stop_tmp.nseg = std::stoi(str_v[25]);
 				stop_tmp.ip = 0;
-				
 				//recon
 				/**/
 				stop_tmp.mom = std::stod(str_v[7]); //ecc_mcs assume muon
