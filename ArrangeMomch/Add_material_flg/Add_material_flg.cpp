@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "===============================================================================\n");
 		fprintf(stderr, " usage:prg in.momch output.momch in_list.txt\n\n");
 		fprintf(stderr, " * material flg *\n");
-		fprintf(stderr, "\t 0 : water\t\n 1 : carbon(base)\t\n 2 : iron\t\n 5 : emulsion\t\n 6 : envelope\n");
+		fprintf(stderr, "\t 0 : water\n\t 1 : carbon(base)\n\t 2 : iron\n\t 5 : emulsion\n\t 6 : envelope\n");
 		fprintf(stderr, "\t-2 : sand muon(penetrate)\t -3 :sideout\n");
 		fprintf(stderr, "===============================================================================\n");
 		fprintf(stderr, " * in_list.txt format : eventid material_flg\n");
