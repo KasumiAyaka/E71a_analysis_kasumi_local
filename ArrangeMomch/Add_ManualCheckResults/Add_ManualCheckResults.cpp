@@ -127,11 +127,11 @@ int main(int argc, char** argv) {
 	if (argc < 4||argc>6) {
 		fprintf(stderr, "===============================================================================\n");
 		fprintf(stderr, " usage:prg in.momch output.momch materialflg [in_list.txt] [0:add sandmuon flg]\n\n * materialflg\n");
-		fprintf(stderr, "\t 0 : water\t\n 1 : carbon(base)\t\n 2 : iron\t\n 5 : emulsion\t\n 6 : envelope\n");
-		fprintf(stderr, "\t-2 : sand muon(penetrate)\t -3 :sideout\n");
-		fprintf(stderr, " usage:prg in.momch output.momch materialflg\n ==> Set the material flag for all events.\n");
-		fprintf(stderr, " usage:prg in.momch output.momch materialflg [in_list.txt]\n ==> Set the material flag for the specified event.");
-		fprintf(stderr, " usage:prg in.momch output.momch materialflg [in_list.txt] 0\n ==> Set the material flag = -2 for the specified event.");
+		fprintf(stderr, "  0 : water\n  1 : carbon(base)\n  2 : iron\n  5 : emulsion\n  6 : envelope\n");
+		fprintf(stderr, " -2 : sand muon(penetrate)\n -3 :sideout\n");
+		fprintf(stderr, " usage:prg in.momch output.momch materialflg\n\t ==> Set the material flag for all events.\n");
+		fprintf(stderr, " usage:prg in.momch output.momch materialflg [in_list.txt]\n\t ==> Set the material flag for the specified event.\n\tlist-->groupid\n");
+		fprintf(stderr, " usage:prg in.momch output.momch materialflg [in_list.txt] 0\n\t ==> Set the material flag = -2 for the specified event.\n\tlist-->unixtime\n");
 		fprintf(stderr, "===============================================================================\n");
 		exit(1);
 	}

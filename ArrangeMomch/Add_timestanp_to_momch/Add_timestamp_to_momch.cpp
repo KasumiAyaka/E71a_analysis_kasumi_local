@@ -133,14 +133,16 @@ void Add_information_of_sharingfile(std::vector<Momentum_recon::Event_informatio
 
 
 int main(int argc, char** argv) {
-	if (argc != 4) {
+	if (argc < 3) {
 		fprintf(stderr, "usage:prg in.momch in_sf.txt  output.momch\n");
 		exit(1);
 	}
 	std::string in_momch = argv[1];// input momch
 	std::string in_sf = argv[2];
-	std::string out_momch = argv[3];// output momch
-
+	std::string out_momch = argv[1];// output momch
+	if (argc > 3) {
+		out_momch = argv[3];// output momch
+	}
 	//bool result = std::filesystem::create_directories(out_momch);
 	//assert(result);
 	//assert(std::filesystem::exists(out_momch));//directryの存在確認
@@ -164,6 +166,7 @@ int main(int argc, char** argv) {
 
 	auto end = std::chrono::system_clock::now();       // 計測終了時刻を保存
 	MeasureProcessingTime(start, end);
+	std::cout << "Fin." << std::endl;
 }
 
 void read_sf(std::string in,std::map<int,Lst>&map) {

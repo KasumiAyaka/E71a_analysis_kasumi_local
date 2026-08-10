@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Calc_average_basetrack_vph_
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Calc_dz_md_reference", "Calc_dz_md_reference\Calc_dz_md_reference.vcxproj", "{58317560-F11E-4510-8984-7BECA3CD994B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Make_reference_for_range_momentum_cut", "Make_reference_for_range_momentum_cut\Make_reference_for_range_momentum_cut.vcxproj", "{2360E762-6406-4F91-9BD6-250F7CD0E206}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -51,6 +53,14 @@ Global
 		{58317560-F11E-4510-8984-7BECA3CD994B}.Release|x64.Build.0 = Release|x64
 		{58317560-F11E-4510-8984-7BECA3CD994B}.Release|x86.ActiveCfg = Release|Win32
 		{58317560-F11E-4510-8984-7BECA3CD994B}.Release|x86.Build.0 = Release|Win32
+		{2360E762-6406-4F91-9BD6-250F7CD0E206}.Debug|x64.ActiveCfg = Debug|x64
+		{2360E762-6406-4F91-9BD6-250F7CD0E206}.Debug|x64.Build.0 = Debug|x64
+		{2360E762-6406-4F91-9BD6-250F7CD0E206}.Debug|x86.ActiveCfg = Debug|Win32
+		{2360E762-6406-4F91-9BD6-250F7CD0E206}.Debug|x86.Build.0 = Debug|Win32
+		{2360E762-6406-4F91-9BD6-250F7CD0E206}.Release|x64.ActiveCfg = Release|x64
+		{2360E762-6406-4F91-9BD6-250F7CD0E206}.Release|x64.Build.0 = Release|x64
+		{2360E762-6406-4F91-9BD6-250F7CD0E206}.Release|x86.ActiveCfg = Release|Win32
+		{2360E762-6406-4F91-9BD6-250F7CD0E206}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

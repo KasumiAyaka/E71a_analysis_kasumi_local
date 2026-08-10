@@ -132,15 +132,15 @@ int main(int argc, char** argv) {
 	double fillfactor_thr = std::stod(argv[7]);
 	int vph_thr = std::stoi(argv[8]);
 	int	mode_p = -1;
-	if (argc == 10) {
+	if (argc >= 10) {
 		mode_p = std::stoi(argv[9]);
 	}
 	double p_fillfactor_thr = 0.68;
 	double p_md_thr = 80;
-	if (argc == 11) {
+	if (argc >= 11) {
 		p_fillfactor_thr = std::stoi(argv[10]);
 	}
-	if (argc == 12) {
+	if (argc >= 12) {
 		p_md_thr = std::stoi(argv[11]);
 	}
 
@@ -176,7 +176,10 @@ int main(int argc, char** argv) {
 				<< std::setw(5) << std::setprecision(0) << itr0->second.charge << " "
 				<< std::setw(5) << std::setprecision(0) << itr0->second.pid << " ";
 			fillfactor = double(itr0->second.nseg) / double(itr0->second.npl);
-			std::cout << std::setw(5) << std::setprecision(4) << fillfactor;
+			std::cout << std::setw(5) << std::setprecision(4) << fillfactor << " "
+				<< std::setw(5) << std::setprecision(1) << itr0->second.al_md << " "
+				<< std::setw(5) << std::setprecision(0) << itr0->second.vph << " "
+				<< std::setw(8) << std::setprecision(4) << sqrt(itr0->second.ax * itr0->second.ax + itr0->second.ay * itr0->second.ay) << " ";
 
 			if (itr0->second.pid == 13) {
 				sig.insert(std::make_pair(itr0->second.rawid, itr0->second));
