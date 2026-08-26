@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "extraporate_VE_alignment", 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pickup_reference_track_of_each_area", "Pickup_reference_track_of_each_area\Pickup_reference_track_of_each_area.vcxproj", "{79D1AF42-3AF5-4422-97DB-9F95CC7D69E8}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pickup_reference_track_for_each_track", "Pickup_reference_track_for_each_track\Pickup_reference_track_for_each_track.vcxproj", "{0A0E4673-A121-4372-BC1E-97386EF4C590}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -61,6 +63,14 @@ Global
 		{79D1AF42-3AF5-4422-97DB-9F95CC7D69E8}.Release|x64.Build.0 = Release|x64
 		{79D1AF42-3AF5-4422-97DB-9F95CC7D69E8}.Release|x86.ActiveCfg = Release|Win32
 		{79D1AF42-3AF5-4422-97DB-9F95CC7D69E8}.Release|x86.Build.0 = Release|Win32
+		{0A0E4673-A121-4372-BC1E-97386EF4C590}.Debug|x64.ActiveCfg = Debug|x64
+		{0A0E4673-A121-4372-BC1E-97386EF4C590}.Debug|x64.Build.0 = Debug|x64
+		{0A0E4673-A121-4372-BC1E-97386EF4C590}.Debug|x86.ActiveCfg = Debug|Win32
+		{0A0E4673-A121-4372-BC1E-97386EF4C590}.Debug|x86.Build.0 = Debug|Win32
+		{0A0E4673-A121-4372-BC1E-97386EF4C590}.Release|x64.ActiveCfg = Release|x64
+		{0A0E4673-A121-4372-BC1E-97386EF4C590}.Release|x64.Build.0 = Release|x64
+		{0A0E4673-A121-4372-BC1E-97386EF4C590}.Release|x86.ActiveCfg = Release|Win32
+		{0A0E4673-A121-4372-BC1E-97386EF4C590}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
