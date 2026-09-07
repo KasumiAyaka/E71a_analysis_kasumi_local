@@ -11,8 +11,6 @@
 #include <set>
 #include <random>
 #include <filesystem>
-#include <algorithm>
-#include <sstream>
 
 
 // TrackList/PLxxx.yaml の各エントリ。
@@ -31,18 +29,13 @@ struct Key {
 	double x, y;
 	int area;
 };
-struct OutputBlock {
-	int zone;
-	std::string yamlText;
-	std::string logText;
-};
 std::vector<TrackEntry> Read_yaml(const std::string& filename);
-void Search_ref_btrk(std::string filename, int pl, std::ostream& ofs, int ecc, int zone, TrackEntry& trk);
+void Search_ref_btrk(std::string filename, int pl, std::ofstream& ofs, int ecc, int zone, TrackEntry& trk);
 static std::string trim(const std::string& s);
 std::string InsertRefFolder(const std::string& saveTo);
 int ExtractEventNumber(const std::string& saveTo);
-void Search_basetrack(std::string ECC_path, int pl, std::string cm_path, Key k, int64_t m[2], TrackEntry &trk, int eccnum);
-void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry &trk, int eccnum);
+void Search_basetrack(std::string ECC_path, int pl, std::string cm_path, Key k, int64_t m[2], TrackEntry &trk);
+void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry &trk);
 
 int main(int argc, char** argv) {
 	if (argc < 3) {
@@ -100,51 +93,33 @@ int main(int argc, char** argv) {
 		// set track list
 		std::vector<TrackEntry>tlist = Read_yaml(file_input.str());
 		ofs_log << pl << std::endl;
-		std::vector<OutputBlock> blocks;
 		for (auto itr = tlist.begin(); itr != tlist.end();itr++) {
-			std::ostringstream yamlSs, logSs;
 			if (itr->RawID == -1) {
 				// prediction track
-				yamlSs << "  - Plate: " << pl << std::endl;
-				yamlSs << "    Track: [" << itr->TrackAx << "," << itr->TrackAy << "," << itr->TrackX << "," << itr->TrackY << "]" << std::endl;
-				yamlSs << "    Zone: " << itr->Zone << std::endl;
-				yamlSs << "    Surface: Both" << std::endl;
-				yamlSs << "    SaveTo: " << itr->SaveTo << std::endl;
-
-				logSs << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << itr->RawID << " " << 0 << std::endl;
+				ofs << "  - Plate: " << pl << std::endl;
+				ofs << "    Track: [" << itr->TrackAx << "," << itr->TrackAy << "," << itr->TrackX << "," << itr->TrackY << "]" << std::endl;
+				ofs << "    Zone: " << itr->Zone << std::endl;
+				ofs << "    Surface: Both" << std::endl;
+				ofs << "    SaveTo: " << itr->SaveTo << std::endl;
+				
+				ofs_log << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << itr->RawID << " " << 0 << std::endl;
 				// search reference track
 				std::stringstream file_in_base;
-				if (eccnum == 4) {
-					file_in_ECC.clear();
-					file_in_ECC.str("");
-					if (itr->Zone == 1) {
-						file_in_ECC << "K:\\NINJA\\E71a\\ECC" << eccnum;
-					}
-					else {
-						file_in_ECC << "I:\\NINJA\\E71a\\ECC" << eccnum;
-					}
-				}
 				file_in_base << file_in_ECC.str() << "\\Area" << itr->Zone << "\\PL" << std::setw(3) << std::setfill('0') << pl << "\\b" << std::setw(3) << std::setfill('0') << pl << ".sel.cor.vxx";
 				if (!std::filesystem::exists(file_in_base.str())) {
 					std::cout << file_in_base.str() << " doesn't exist." << std::endl;
-					blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str() });
 					continue;
 				}
-				Search_ref_btrk(file_in_base.str(), pl, yamlSs, eccnum, itr->Zone, *itr);
-				logSs << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << itr->RawID << " " << -1 << std::endl;
+				Search_ref_btrk(file_in_base.str(), pl, ofs, eccnum, itr->Zone, *itr);
+				ofs_log << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << itr->RawID << " " << -1 << std::endl;
 
 			}
 			else {
-				if (eccnum == 4) {
-					file_in_ECC.clear();
-					file_in_ECC.str("");
-					file_in_ECC << "K:\\NINJA\\E71a\\ECC" << eccnum;
-				}
 				// real track
-				yamlSs << "  - Plate: " << itr->Plate << std::endl;
-				yamlSs << "    RawID: " << itr->RawID << std::endl;
-				yamlSs << "    Surface: Both" << std::endl;
-				yamlSs << "    SaveTo: " << itr->SaveTo << std::endl;
+				ofs << "  - Plate: " << itr->Plate << std::endl;
+				ofs << "    RawID: " << itr->RawID << std::endl;
+				ofs << "    Surface: Both" << std::endl;
+				ofs << "    SaveTo: " << itr->SaveTo << std::endl;
 				int tmp = itr->RawID;
 				// search reference track
 				std::stringstream file_in_base,file_in_cm;
@@ -152,27 +127,17 @@ int main(int argc, char** argv) {
 				file_in_cm << file_in_ECC.str() << "\\Area0\\0\\align\\corrmap-abs.lst";
 				if (!std::filesystem::exists(file_in_base.str())) {
 					std::cout << file_in_base.str() << " doesn't exist." << std::endl;
-					blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str() });
 					continue;
 				}
-				Large_area2Small_area(file_in_ECC.str(), file_in_cm.str(), *itr, eccnum);
-				logSs << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << tmp << " " << itr->RawID << std::endl;// area,eventid,rawid,original rawid
-				Search_ref_btrk(file_in_base.str(), pl, yamlSs, eccnum, itr->Zone, *itr);
-				logSs << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << itr->RawID << " " << -1 << std::endl;
+				Large_area2Small_area(file_in_ECC.str(), file_in_cm.str(), *itr);
+				ofs_log << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << tmp << " " << itr->RawID << std::endl;// area,eventid,rawid,original rawid
+				Search_ref_btrk(file_in_base.str(), pl, ofs, eccnum, itr->Zone, *itr);
+				ofs_log << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << itr->RawID << " " << -1 << std::endl;
 
 				//printf("input file  [%s]\n", file_in_base.str().c_str());
 				//printf("output file [%s]\n", file_output.str().c_str());
 
 			}
-			blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str() });
-		}
-		// zoneの値の昇順にソートしてから出力する
-		std::stable_sort(blocks.begin(), blocks.end(), [](const OutputBlock& a, const OutputBlock& b) {
-			return a.zone < b.zone;
-			});
-		for (const auto& blk : blocks) {
-			ofs << blk.yamlText;
-			ofs_log << blk.logText;
 		}
 	}
 }
@@ -213,7 +178,7 @@ void CheckArea(double x, double y,Key& ret) {
 		}
 	}
 }
-void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry& trk, int eccnum) {
+void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry& trk) {
 	std::stringstream Marged;
 	Marged << ECC_path << "\\Area0\\PL" << std::setw(3) << std::setfill('0') << trk.Plate << "\\b" << std::setw(3) << std::setfill('0') << trk.Plate << ".sel.cor.vxx";
 	// set track
@@ -239,14 +204,14 @@ void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry
 	}
 
 	std::cout << "\t=== Area" << k.area << " ===" << std::endl;
-	Search_basetrack(ECC_path, trk.Plate, cm_path, k, m, trk,eccnum);//set area & pos
+	Search_basetrack(ECC_path, trk.Plate, cm_path, k, m, trk);//set area & pos
 	int tmp = k.area;
 	if (trk.TrackAx==0 && trk.TrackAy==0) {
 		for (int i = 1; i < 7; i++) {
 			if (i == tmp)continue;
 			std::cout << "\t=== Area" << i << " ===" << std::endl;
 			k.area = i;
-			Search_basetrack(ECC_path, trk.Plate, cm_path, k, m, trk, eccnum);//set area & pos
+			Search_basetrack(ECC_path, trk.Plate, cm_path, k, m, trk);//set area & pos
 			if (trk.TrackAx != 0 || trk.TrackAy != 0) 	break;
 		}
 	}
@@ -255,22 +220,10 @@ void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry
 		std::exit(EXIT_SUCCESS);
 	}
 }
-void Search_basetrack(std::string ECC_path,int pl, std::string cm_path, Key k,int64_t m[2], TrackEntry& trk,int eccnum) {
-	std::stringstream Origin,str_tmp;
-	std::string ECC_Area = ECC_path;
-	if (eccnum == 4) {
-		str_tmp.clear();
-		str_tmp.str("");
-		if (k.area == 1) {
-			str_tmp << "K:\\NINJA\\E71a\\ECC" << eccnum;
-		}
-		else {
-			str_tmp << "I:\\NINJA\\E71a\\ECC" << eccnum;
-		}
-		ECC_Area = str_tmp.str();
-	}
+void Search_basetrack(std::string ECC_path,int pl, std::string cm_path, Key k,int64_t m[2], TrackEntry& trk) {
+	std::stringstream Origin;
 
-	Origin << ECC_Area << "\\Area" << k.area << "\\PL" << std::setw(3) << std::setfill('0') << trk.Plate << "\\b" << std::setw(3) << std::setfill('0') << trk.Plate << ".sel.cor.vxx";
+	Origin << ECC_path << "\\Area" << k.area << "\\PL" << std::setw(3) << std::setfill('0') << trk.Plate << "\\b" << std::setw(3) << std::setfill('0') << trk.Plate << ".sel.cor.vxx";
 
 
 	double d =50000;//um
@@ -374,7 +327,7 @@ std::vector<TrackEntry> Read_yaml(const std::string& filename) {
 	}
 	return entries;
 }
-void Search_ref_btrk(std::string filename, int pl, std::ostream& ofs, int ecc, int zone, TrackEntry& trk) {
+void Search_ref_btrk(std::string filename, int pl, std::ofstream& ofs, int ecc, int zone, TrackEntry& trk) {
 
 	double d = 1000;//um
 	//3. オプションを与えたい場合。
