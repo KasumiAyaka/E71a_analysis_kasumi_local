@@ -41,7 +41,7 @@ void Search_ref_btrk(std::string filename, int pl, std::ostream& ofs, int ecc, i
 static std::string trim(const std::string& s);
 std::string InsertRefFolder(const std::string& saveTo);
 int ExtractEventNumber(const std::string& saveTo);
-void Search_basetrack(std::string ECC_path, int pl, std::string cm_path, Key k, int64_t m[2], TrackEntry &trk, int eccnum);
+void Search_basetrack(std::string ECC_path, int pl, std::string cm_path, Key k, int64_t m[2], TrackEntry &trk, int eccnum,int mode);
 void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry &trk, int eccnum);
 
 int main(int argc, char** argv) {
@@ -86,6 +86,10 @@ int main(int argc, char** argv) {
 		exit;
 	}
 
+	//
+	std::vector<std::pair<int,int>> errlog;
+
+
 	std::ofstream ofs_log(output_log);
 	std::filesystem::path file_path;
 	for (int pl = 3; pl <= 133; pl++) {
@@ -104,6 +108,7 @@ int main(int argc, char** argv) {
 		for (auto itr = tlist.begin(); itr != tlist.end();itr++) {
 			std::ostringstream yamlSs, logSs;
 			if (itr->RawID == -1) {
+				printf("\n   --- PREDICTION TRACK ---\n", pl);
 				// prediction track
 				yamlSs << "  - Plate: " << pl << std::endl;
 				yamlSs << "    Track: [" << itr->TrackAx << "," << itr->TrackAy << "," << itr->TrackX << "," << itr->TrackY << "]" << std::endl;
@@ -135,6 +140,7 @@ int main(int argc, char** argv) {
 
 			}
 			else {
+				printf("\n   --- REAL TRACK ---\n", pl);
 				if (eccnum == 4) {
 					file_in_ECC.clear();
 					file_in_ECC.str("");
@@ -146,7 +152,7 @@ int main(int argc, char** argv) {
 				yamlSs << "    Surface: Both" << std::endl;
 				yamlSs << "    SaveTo: " << itr->SaveTo << std::endl;
 				int tmp = itr->RawID;
-				// search reference track
+				// matching real track
 				std::stringstream file_in_base,file_in_cm;
 				file_in_base << file_in_ECC.str() << "\\Area0\\PL" << std::setw(3) << std::setfill('0') << pl << "\\b" << std::setw(3) << std::setfill('0') << pl << ".sel.cor.vxx";
 				file_in_cm << file_in_ECC.str() << "\\Area0\\0\\align\\corrmap-abs.lst";
@@ -157,6 +163,10 @@ int main(int argc, char** argv) {
 				}
 				Large_area2Small_area(file_in_ECC.str(), file_in_cm.str(), *itr, eccnum);
 				logSs << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << tmp << " " << itr->RawID << std::endl;// area,eventid,rawid,original rawid
+				if (itr->RawID == 10) {
+					errlog.push_back(std::make_pair(pl,tmp));
+				}
+																															 // search reference track
 				Search_ref_btrk(file_in_base.str(), pl, yamlSs, eccnum, itr->Zone, *itr);
 				logSs << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << itr->RawID << " " << -1 << std::endl;
 
@@ -173,6 +183,14 @@ int main(int argc, char** argv) {
 		for (const auto& blk : blocks) {
 			ofs << blk.yamlText;
 			ofs_log << blk.logText;
+		}
+	}
+
+	if (errlog.size() > 0) {
+		std::cout << "\n\n ERRORs:Cannot find this basetrack in a small area" << std::endl;
+		std::cout << "PL , rawid(merged) = " << std::endl;
+		for (auto itr = errlog.begin(); itr != errlog.end(); itr++) {
+			std::cout << itr->first << ", " << itr->second << std::endl;
 		}
 	}
 }
@@ -239,24 +257,26 @@ void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry
 	}
 
 	std::cout << "\t=== Area" << k.area << " ===" << std::endl;
-	Search_basetrack(ECC_path, trk.Plate, cm_path, k, m, trk,eccnum);//set area & pos
+	Search_basetrack(ECC_path, trk.Plate, cm_path, k, m, trk,eccnum,1);//set area & pos
 	int tmp = k.area;
 	if (trk.TrackAx==0 && trk.TrackAy==0) {
 		for (int i = 1; i < 7; i++) {
 			if (i == tmp)continue;
 			std::cout << "\t=== Area" << i << " ===" << std::endl;
 			k.area = i;
-			Search_basetrack(ECC_path, trk.Plate, cm_path, k, m, trk, eccnum);//set area & pos
+			Search_basetrack(ECC_path, trk.Plate, cm_path, k, m, trk, eccnum,-1);//set area & pos
 			if (trk.TrackAx != 0 || trk.TrackAy != 0) 	break;
 		}
 	}
 	if (trk.TrackAx == 0 && trk.TrackAy == 0) {
 		std::cout << "\tBasetrack " << trk.RawID << "was not found in small area.\n\n" << std::endl;
-		std::exit(EXIT_SUCCESS);
+		//std::exit(EXIT_SUCCESS);
+		trk.RawID = 10;//instead of small area rawid
+
 	}
 }
-void Search_basetrack(std::string ECC_path,int pl, std::string cm_path, Key k,int64_t m[2], TrackEntry& trk,int eccnum) {
-	std::stringstream Origin,str_tmp;
+void Search_basetrack(std::string ECC_path, int pl, std::string cm_path, Key k, int64_t m[2], TrackEntry& trk, int eccnum, int mode) {
+	std::stringstream Origin, str_tmp;
 	std::string ECC_Area = ECC_path;
 	if (eccnum == 4) {
 		str_tmp.clear();
@@ -273,29 +293,30 @@ void Search_basetrack(std::string ECC_path,int pl, std::string cm_path, Key k,in
 	Origin << ECC_Area << "\\Area" << k.area << "\\PL" << std::setw(3) << std::setfill('0') << trk.Plate << "\\b" << std::setw(3) << std::setfill('0') << trk.Plate << ".sel.cor.vxx";
 
 
-	double d =50000;//um
+	double d = 50000;//um
 	vxx::BvxxReader br;
 	std::vector<vxx::CutArea> area;
 	std::vector<vxx::base_track_t> base_sel;
 	int refnum = 0;
-		// target positionから+- d[um]の範囲から角度の立ったproton likeな飛跡を探索
-		area.push_back(vxx::CutArea(k.x - d, k.x + d, k.y - d, k.y + d));
-		//std::vector<vxx::base_track_t> base = br.ReadAll(Origin.str(), pl, k.area, vxx::opt::a = area);//pl,pos
-		std::vector<vxx::base_track_t> base = br.ReadAll(Origin.str(), pl, k.area);//pl,pos
-		std::vector<vxx::base_track_t> base_selected;
+	// target positionから+- d[um]の範囲から角度の立ったproton likeな飛跡を探索
+	area.push_back(vxx::CutArea(k.x - d, k.x + d, k.y - d, k.y + d));
+	//std::vector<vxx::base_track_t> base = br.ReadAll(Origin.str(), pl, k.area, vxx::opt::a = area);//pl,pos
+	std::vector<vxx::base_track_t> base = br.ReadAll(Origin.str(), pl, k.area);//pl,pos
+	std::vector<vxx::base_track_t> base_selected;
+	int flg = -1;
+	for (auto& b : base) {
 
-		for (auto& b : base) {
-
-			if (b.m[0].rawid == m[0] && b.m[1].rawid == m[1]) {
-				std::cout << "\tfound\n\n" << std::endl;
-				trk.RawID = b.rawid;//small area
-				trk.Zone = k.area;
-				trk.TrackAx = b.ax;
-				trk.TrackAy = b.ay;
-				trk.TrackX = b.x;
-				trk.TrackY = b.y;
-			}
+		if (b.m[0].rawid == m[0] && b.m[1].rawid == m[1]) {
+			std::cout << "\tfound\n\n" << std::endl;
+			trk.RawID = b.rawid;//small area
+			trk.Zone = k.area;
+			trk.TrackAx = b.ax;
+			trk.TrackAy = b.ay;
+			trk.TrackX = b.x;
+			trk.TrackY = b.y;
+			flg = 1;
 		}
+	}
 }
 
 static std::string trim(const std::string& s) {
