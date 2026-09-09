@@ -27,6 +27,12 @@ struct TrackEntry {
 	int Zone = -1;          // -1 : 未指定
 	std::string Surface;
 	std::string SaveTo;
+
+	// Large_area2Small_area でのrawidマッピング記録用
+	bool Mapped = false;               // 小エリアでのbasetrackマッピングに成功したか
+	int64_t MergedPh = -1;             // merged(Area0)ファイル上のbasetrackのph%10000
+	double MergedAx = 0, MergedAy = 0, MergedX = 0, MergedY = 0; // mergedファイル上のax,ay,x,y（マッピング失敗時のフォールバック用）
+	int64_t SmallAreaPh = -1;          // 小エリアで見つかったbasetrackのph%10000
 };
 struct Key {
 	double x, y;
@@ -36,6 +42,7 @@ struct OutputBlock {
 	int zone;
 	std::string yamlText;
 	std::string logText;
+	std::string mapText;
 };
 std::vector<TrackEntry> Read_yaml(const std::string& filename);
 void Search_ref_btrk(std::string filename, int pl, std::ostream& ofs, int ecc, int zone, TrackEntry& trk);
@@ -93,6 +100,10 @@ int main(int argc, char** argv) {
 
 
 	std::ofstream ofs_log(output_log);
+	// [PL eventid rawid1 zone rawid2 ax ay x y ph%10000] を出力する
+	std::filesystem::path logPath(output_log);
+	std::filesystem::path mapPath = logPath.parent_path() / (logPath.stem().string() + "_rawidmap" + logPath.extension().string());
+	std::ofstream ofs_map(mapPath.string());
 	std::filesystem::path file_path;
 	for (int pl = 3; pl <= 133; pl++) {
 		std::stringstream file_input,file_output;
@@ -108,10 +119,11 @@ int main(int argc, char** argv) {
 		ofs_log << pl << std::endl;
 		std::vector<OutputBlock> blocks;
 		for (auto itr = tlist.begin(); itr != tlist.end();itr++) {
-			std::ostringstream yamlSs, logSs;
+			std::ostringstream yamlSs, logSs, mapSs;
 			if (itr->RawID == -1) {
 				printf("\n   --- PREDICTION TRACK ---\n", pl);
 				// prediction track
+				long long origRawID = itr->RawID;
 				yamlSs << "  - Plate: " << pl << std::endl;
 				yamlSs << "    Track: [" << itr->TrackAx << "," << itr->TrackAy << "," << itr->TrackX << "," << itr->TrackY << "]" << std::endl;
 				yamlSs << "    Zone: " << itr->Zone << std::endl;
@@ -119,6 +131,9 @@ int main(int argc, char** argv) {
 				yamlSs << "    SaveTo: " << itr->SaveTo << std::endl;
 
 				logSs << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << itr->RawID << " " << 0 << std::endl;
+				// prediction trackはph%10000を-1として出力する
+				mapSs << pl << " " << ExtractEventNumber(itr->SaveTo) << " " << origRawID << " " << itr->Zone << " " << 0
+					<< " " << itr->TrackAx << " " << itr->TrackAy << " " << itr->TrackX << " " << itr->TrackY << " " << -1 << std::endl;
 				// search reference track
 				std::stringstream file_in_base;
 				if (eccnum == 4) {
@@ -134,7 +149,7 @@ int main(int argc, char** argv) {
 				file_in_base << file_in_ECC.str() << "\\Area" << itr->Zone << "\\PL" << std::setw(3) << std::setfill('0') << pl << "\\b" << std::setw(3) << std::setfill('0') << pl << ".sel.cor.vxx";
 				if (!std::filesystem::exists(file_in_base.str())) {
 					std::cout << file_in_base.str() << " doesn't exist." << std::endl;
-					blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str() });
+					blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str(), mapSs.str() });
 					continue;
 				}
 				Search_ref_btrk(file_in_base.str(), pl, yamlSs, eccnum, itr->Zone, *itr);
@@ -160,13 +175,24 @@ int main(int argc, char** argv) {
 				file_in_cm << file_in_ECC.str() << "\\Area0\\0\\align\\corrmap-abs.lst";
 				if (!std::filesystem::exists(file_in_base.str())) {
 					std::cout << file_in_base.str() << " doesn't exist." << std::endl;
-					blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str() });
+					blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str(), mapSs.str() });
 					continue;
 				}
 				Large_area2Small_area(file_in_ECC.str(), file_in_cm.str(), *itr, eccnum);
 				logSs << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << tmp << " " << itr->RawID << std::endl;// area,eventid,rawid,original rawid
 				if (itr->RawID == 10) {
 					errlog.push_back(std::make_pair(pl,tmp));
+				}
+				// rawidマッピングに成功していればrawid1,rawid2のph%10000の和を、
+				// 失敗していればmergedファイル上のax,ay,x,yと-10を出力する
+				if (itr->Mapped) {
+					long long phSum = itr->MergedPh + itr->SmallAreaPh;
+					mapSs << pl << " " << ExtractEventNumber(itr->SaveTo) << " " << tmp << " " << itr->Zone << " " << itr->RawID
+						<< " " << itr->TrackAx << " " << itr->TrackAy << " " << itr->TrackX << " " << itr->TrackY << " " << phSum << std::endl;
+				}
+				else {
+					mapSs << pl << " " << ExtractEventNumber(itr->SaveTo) << " " << tmp << " " << itr->Zone << " " << itr->RawID
+						<< " " << itr->MergedAx << " " << itr->MergedAy << " " << itr->MergedX << " " << itr->MergedY << " " << -10 << std::endl;
 				}
 																															 // search reference track
 				Search_ref_btrk(file_in_base.str(), pl, yamlSs, eccnum, itr->Zone, *itr);
@@ -176,7 +202,7 @@ int main(int argc, char** argv) {
 				//printf("output file [%s]\n", file_output.str().c_str());
 
 			}
-			blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str() });
+			blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str(), mapSs.str() });
 		}
 		// zoneの値の昇順にソートしてから出力する
 		std::stable_sort(blocks.begin(), blocks.end(), [](const OutputBlock& a, const OutputBlock& b) {
@@ -185,6 +211,7 @@ int main(int argc, char** argv) {
 		for (const auto& blk : blocks) {
 			ofs << blk.yamlText;
 			ofs_log << blk.logText;
+			ofs_map << blk.mapText;
 		}
 	}
 
@@ -253,6 +280,11 @@ void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry
 				m[0] = b.m[0].rawid;
 				m[1] = b.m[1].rawid;
 				CheckArea(b.x, b.y, k);
+				trk.MergedAx = b.ax;
+				trk.MergedAy = b.ay;
+				trk.MergedX = b.x;
+				trk.MergedY = b.y;
+				trk.MergedPh = b.m[0].ph % 10000 + b.m[1].ph % 10000;
 			}
 		}
 		br.End();
@@ -302,6 +334,8 @@ void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry
 			trk.TrackAy = nearest.ay;
 			trk.TrackX = nearest.x;
 			trk.TrackY = nearest.y;
+			trk.SmallAreaPh = nearest.m[0].ph % 10000 + nearest.m[1].ph % 10000;
+			trk.Mapped = true;
 		}
 		else {
 			std::cout << "\tNearest basetrack search also failed.\n\n" << std::endl;
@@ -382,6 +416,8 @@ void Search_basetrack(std::string ECC_path, int pl, std::string cm_path, Key k, 
 			trk.TrackAy = b.ay;
 			trk.TrackX = b.x;
 			trk.TrackY = b.y;
+			trk.SmallAreaPh = b.m[0].ph % 10000 + b.m[1].ph % 10000;
+			trk.Mapped = true;
 			flg = 1;
 		}
 	}
