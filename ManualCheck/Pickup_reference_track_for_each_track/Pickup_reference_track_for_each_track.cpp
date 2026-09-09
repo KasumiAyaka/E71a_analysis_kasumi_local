@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <algorithm>
 #include <sstream>
+#include <cmath>
 
 
 // TrackList/PLxxx.yaml の各エントリ。
@@ -42,6 +43,7 @@ static std::string trim(const std::string& s);
 std::string InsertRefFolder(const std::string& saveTo);
 int ExtractEventNumber(const std::string& saveTo);
 void Search_basetrack(std::string ECC_path, int pl, std::string cm_path, Key k, int64_t m[2], TrackEntry &trk, int eccnum,int mode);
+bool Search_nearest_basetrack(std::string ECC_path, int pl, TrackEntry& trk, Key k, int eccnum, vxx::base_track_t& best, double& bestDist);
 void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry &trk, int eccnum);
 
 int main(int argc, char** argv) {
@@ -270,10 +272,76 @@ void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry
 	}
 	if (trk.TrackAx == 0 && trk.TrackAy == 0) {
 		std::cout << "\tBasetrack " << trk.RawID << "was not found in small area.\n\n" << std::endl;
-		//std::exit(EXIT_SUCCESS);
-		trk.RawID = 10;//instead of small area rawid
 
+		// 完全一致するbasetrackが見つからなかった場合、
+		// mergedファイルで見つけたbasetrackの位置に最も近いbasetrackを各Areaから探索して代わりに使う
+		vxx::base_track_t nearest;
+		double nearestDist = 0;
+		bool found = false;
+		int foundArea = -1;
+		for (int i = 1; i < 7; i++) {
+			vxx::base_track_t candidate;
+			double dist = 0;
+			Key ki = k;
+			ki.area = i;
+			if (Search_nearest_basetrack(ECC_path, trk.Plate, trk, ki, eccnum, candidate, dist)) {
+				if (!found || dist < nearestDist) {
+					nearest = candidate;
+					nearestDist = dist;
+					found = true;
+					foundArea = i;
+				}
+			}
+		}
+
+		if (found) {
+			std::cout << "\tnearest basetrack found. rawid=" << nearest.rawid << " area=" << foundArea << " dist=" << nearestDist << " um" << std::endl;
+			trk.RawID = nearest.rawid;
+			trk.Zone = foundArea;
+			trk.TrackAx = nearest.ax;
+			trk.TrackAy = nearest.ay;
+			trk.TrackX = nearest.x;
+			trk.TrackY = nearest.y;
+		}
+		else {
+			std::cout << "\tNearest basetrack search also failed.\n\n" << std::endl;
+			//std::exit(EXIT_SUCCESS);
+			trk.RawID = 10;//instead of small area rawid
+		}
 	}
+}
+bool Search_nearest_basetrack(std::string ECC_path, int pl, TrackEntry& trk, Key k, int eccnum, vxx::base_track_t& best, double& bestDist) {
+	std::stringstream Origin, str_tmp;
+	std::string ECC_Area = ECC_path;
+	if (eccnum == 4) {
+		if (k.area == 1) {
+			str_tmp << "K:\\NINJA\\E71a\\ECC" << eccnum;
+		}
+		else {
+			str_tmp << "I:\\NINJA\\E71a\\ECC" << eccnum;
+		}
+		ECC_Area = str_tmp.str();
+	}
+
+	Origin << ECC_Area << "\\Area" << k.area << "\\PL" << std::setw(3) << std::setfill('0') << trk.Plate << "\\b" << std::setw(3) << std::setfill('0') << trk.Plate << ".sel.cor.vxx";
+
+	double d = 50000;//um : Search_basetrackと同じ探索範囲
+	vxx::BvxxReader br;
+	std::vector<vxx::base_track_t> base = br.ReadAll(Origin.str(), pl, k.area);//pl,pos
+
+	bool found = false;
+	for (auto& b : base) {
+		double dx = b.x - k.x;
+		double dy = b.y - k.y;
+		if (std::abs(dx) > d || std::abs(dy) > d) continue;
+		double dist = std::sqrt(dx * dx + dy * dy);
+		if (!found || dist < bestDist) {
+			best = b;
+			bestDist = dist;
+			found = true;
+		}
+	}
+	return found;
 }
 void Search_basetrack(std::string ECC_path, int pl, std::string cm_path, Key k, int64_t m[2], TrackEntry& trk, int eccnum, int mode) {
 	std::stringstream Origin, str_tmp;
