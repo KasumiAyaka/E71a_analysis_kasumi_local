@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <algorithm>
 #include <sstream>
+#include <cmath>
 
 
 // TrackList/PLxxx.yaml の各エントリ。
@@ -26,6 +27,12 @@ struct TrackEntry {
 	int Zone = -1;          // -1 : 未指定
 	std::string Surface;
 	std::string SaveTo;
+
+	// Large_area2Small_area でのrawidマッピング記録用
+	bool Mapped = false;               // 小エリアでのbasetrackマッピングに成功したか
+	int64_t MergedPh = -1;             // merged(Area0)ファイル上のbasetrackのph%10000
+	double MergedAx = 0, MergedAy = 0, MergedX = 0, MergedY = 0; // mergedファイル上のax,ay,x,y（マッピング失敗時のフォールバック用）
+	int64_t SmallAreaPh = -1;          // 小エリアで見つかったbasetrackのph%10000
 };
 struct Key {
 	double x, y;
@@ -35,6 +42,7 @@ struct OutputBlock {
 	int zone;
 	std::string yamlText;
 	std::string logText;
+	std::string mapText;
 };
 std::vector<TrackEntry> Read_yaml(const std::string& filename);
 void Search_ref_btrk(std::string filename, int pl, std::ostream& ofs, int ecc, int zone, TrackEntry& trk);
@@ -42,6 +50,7 @@ static std::string trim(const std::string& s);
 std::string InsertRefFolder(const std::string& saveTo);
 int ExtractEventNumber(const std::string& saveTo);
 void Search_basetrack(std::string ECC_path, int pl, std::string cm_path, Key k, int64_t m[2], TrackEntry &trk, int eccnum,int mode);
+bool Search_nearest_basetrack(std::string ECC_path, int pl, TrackEntry& trk, Key k, int eccnum, vxx::base_track_t& best, double& bestDist);
 void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry &trk, int eccnum);
 
 int main(int argc, char** argv) {
@@ -91,6 +100,10 @@ int main(int argc, char** argv) {
 
 
 	std::ofstream ofs_log(output_log);
+	// [PL eventid rawid1 zone rawid2 ax ay x y ph%10000] を出力する
+	std::filesystem::path logPath(output_log);
+	std::filesystem::path mapPath = logPath.parent_path() / (logPath.stem().string() + "_rawidmap" + logPath.extension().string());
+	std::ofstream ofs_map(mapPath.string());
 	std::filesystem::path file_path;
 	for (int pl = 3; pl <= 133; pl++) {
 		std::stringstream file_input,file_output;
@@ -106,10 +119,11 @@ int main(int argc, char** argv) {
 		ofs_log << pl << std::endl;
 		std::vector<OutputBlock> blocks;
 		for (auto itr = tlist.begin(); itr != tlist.end();itr++) {
-			std::ostringstream yamlSs, logSs;
+			std::ostringstream yamlSs, logSs, mapSs;
 			if (itr->RawID == -1) {
 				printf("\n   --- PREDICTION TRACK ---\n", pl);
 				// prediction track
+				long long origRawID = itr->RawID;
 				yamlSs << "  - Plate: " << pl << std::endl;
 				yamlSs << "    Track: [" << itr->TrackAx << "," << itr->TrackAy << "," << itr->TrackX << "," << itr->TrackY << "]" << std::endl;
 				yamlSs << "    Zone: " << itr->Zone << std::endl;
@@ -117,6 +131,9 @@ int main(int argc, char** argv) {
 				yamlSs << "    SaveTo: " << itr->SaveTo << std::endl;
 
 				logSs << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << itr->RawID << " " << 0 << std::endl;
+				// prediction trackはph%10000を-1として出力する
+				mapSs << pl << " " << ExtractEventNumber(itr->SaveTo) << " " << origRawID << " " << itr->Zone << " " << 0
+					<< " " << itr->TrackAx << " " << itr->TrackAy << " " << itr->TrackX << " " << itr->TrackY << " " << -1 << std::endl;
 				// search reference track
 				std::stringstream file_in_base;
 				if (eccnum == 4) {
@@ -132,7 +149,7 @@ int main(int argc, char** argv) {
 				file_in_base << file_in_ECC.str() << "\\Area" << itr->Zone << "\\PL" << std::setw(3) << std::setfill('0') << pl << "\\b" << std::setw(3) << std::setfill('0') << pl << ".sel.cor.vxx";
 				if (!std::filesystem::exists(file_in_base.str())) {
 					std::cout << file_in_base.str() << " doesn't exist." << std::endl;
-					blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str() });
+					blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str(), mapSs.str() });
 					continue;
 				}
 				Search_ref_btrk(file_in_base.str(), pl, yamlSs, eccnum, itr->Zone, *itr);
@@ -158,13 +175,24 @@ int main(int argc, char** argv) {
 				file_in_cm << file_in_ECC.str() << "\\Area0\\0\\align\\corrmap-abs.lst";
 				if (!std::filesystem::exists(file_in_base.str())) {
 					std::cout << file_in_base.str() << " doesn't exist." << std::endl;
-					blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str() });
+					blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str(), mapSs.str() });
 					continue;
 				}
 				Large_area2Small_area(file_in_ECC.str(), file_in_cm.str(), *itr, eccnum);
 				logSs << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << tmp << " " << itr->RawID << std::endl;// area,eventid,rawid,original rawid
 				if (itr->RawID == 10) {
 					errlog.push_back(std::make_pair(pl,tmp));
+				}
+				// rawidマッピングに成功していればrawid1,rawid2のph%10000の和を、
+				// 失敗していればmergedファイル上のax,ay,x,yと-10を出力する
+				if (itr->Mapped) {
+					long long phSum = itr->MergedPh + itr->SmallAreaPh;
+					mapSs << pl << " " << ExtractEventNumber(itr->SaveTo) << " " << tmp << " " << itr->Zone << " " << itr->RawID
+						<< " " << itr->TrackAx << " " << itr->TrackAy << " " << itr->TrackX << " " << itr->TrackY << " " << phSum << std::endl;
+				}
+				else {
+					mapSs << pl << " " << ExtractEventNumber(itr->SaveTo) << " " << tmp << " " << itr->Zone << " " << itr->RawID
+						<< " " << itr->MergedAx << " " << itr->MergedAy << " " << itr->MergedX << " " << itr->MergedY << " " << -10 << std::endl;
 				}
 																															 // search reference track
 				Search_ref_btrk(file_in_base.str(), pl, yamlSs, eccnum, itr->Zone, *itr);
@@ -174,7 +202,7 @@ int main(int argc, char** argv) {
 				//printf("output file [%s]\n", file_output.str().c_str());
 
 			}
-			blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str() });
+			blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str(), mapSs.str() });
 		}
 		// zoneの値の昇順にソートしてから出力する
 		std::stable_sort(blocks.begin(), blocks.end(), [](const OutputBlock& a, const OutputBlock& b) {
@@ -183,6 +211,7 @@ int main(int argc, char** argv) {
 		for (const auto& blk : blocks) {
 			ofs << blk.yamlText;
 			ofs_log << blk.logText;
+			ofs_map << blk.mapText;
 		}
 	}
 
@@ -231,6 +260,18 @@ void CheckArea(double x, double y,Key& ret) {
 		}
 	}
 }
+// 見つかった小エリア側basetrackの位置(trk.TrackX,trk.TrackY)が、
+// 目標位置(k.x,k.y)からSearch_ref_btrkの初期探索半径(d=1000um)±500um以内にあるかを確認する。
+static void CheckMatchDistance(const TrackEntry& trk, const Key& k) {
+	double dist = std::sqrt(std::pow(trk.TrackX - k.x, 2) + std::pow(trk.TrackY - k.y, 2));
+	const double refD = 1000; // Search_ref_btrkの初期d(um)と同じ基準値
+	const double tolerance = 500;
+	if (dist > refD + tolerance) {
+		std::cout << "\t[WARN] matched basetrack (rawid=" << trk.RawID << ") is far from target position: dist="
+			<< dist << "um (target: d=" << refD << "+-" << tolerance << "um)" << std::endl;
+	}
+}
+
 void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry& trk, int eccnum) {
 	std::stringstream Marged;
 	Marged << ECC_path << "\\Area0\\PL" << std::setw(3) << std::setfill('0') << trk.Plate << "\\b" << std::setw(3) << std::setfill('0') << trk.Plate << ".sel.cor.vxx";
@@ -251,6 +292,11 @@ void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry
 				m[0] = b.m[0].rawid;
 				m[1] = b.m[1].rawid;
 				CheckArea(b.x, b.y, k);
+				trk.MergedAx = b.ax;
+				trk.MergedAy = b.ay;
+				trk.MergedX = b.x;
+				trk.MergedY = b.y;
+				trk.MergedPh = b.m[0].ph % 10000 + b.m[1].ph % 10000;
 			}
 		}
 		br.End();
@@ -268,12 +314,84 @@ void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry
 			if (trk.TrackAx != 0 || trk.TrackAy != 0) 	break;
 		}
 	}
+	if (trk.TrackAx != 0 || trk.TrackAy != 0) {
+		CheckMatchDistance(trk, k);
+	}
 	if (trk.TrackAx == 0 && trk.TrackAy == 0) {
 		std::cout << "\tBasetrack " << trk.RawID << "was not found in small area.\n\n" << std::endl;
-		//std::exit(EXIT_SUCCESS);
-		trk.RawID = 10;//instead of small area rawid
 
+		// 完全一致するbasetrackが見つからなかった場合、
+		// mergedファイルで見つけたbasetrackの位置に最も近いbasetrackを各Areaから探索して代わりに使う
+		vxx::base_track_t nearest;
+		double nearestDist = 0;
+		bool found = false;
+		int foundArea = -1;
+		for (int i = 1; i < 7; i++) {
+			vxx::base_track_t candidate;
+			double dist = 0;
+			Key ki = k;
+			ki.area = i;
+			if (Search_nearest_basetrack(ECC_path, trk.Plate, trk, ki, eccnum, candidate, dist)) {
+				if (!found || dist < nearestDist) {
+					nearest = candidate;
+					nearestDist = dist;
+					found = true;
+					foundArea = i;
+				}
+			}
+		}
+
+		if (found) {
+			std::cout << "\tnearest basetrack found. rawid=" << nearest.rawid << " area=" << foundArea << " dist=" << nearestDist << " um" << std::endl;
+			trk.RawID = nearest.rawid;
+			trk.Zone = foundArea;
+			trk.TrackAx = nearest.ax;
+			trk.TrackAy = nearest.ay;
+			trk.TrackX = nearest.x;
+			trk.TrackY = nearest.y;
+			trk.SmallAreaPh = nearest.m[0].ph % 10000 + nearest.m[1].ph % 10000;
+			trk.Mapped = true;
+			CheckMatchDistance(trk, k);
+		}
+		else {
+			std::cout << "\tNearest basetrack search also failed.\n\n" << std::endl;
+			//std::exit(EXIT_SUCCESS);
+			trk.RawID = 10;//instead of small area rawid
+		}
 	}
+}
+bool Search_nearest_basetrack(std::string ECC_path, int pl, TrackEntry& trk, Key k, int eccnum, vxx::base_track_t& best, double& bestDist) {
+	std::stringstream Origin, str_tmp;
+	std::string ECC_Area = ECC_path;
+	if (eccnum == 4) {
+		if (k.area == 1) {
+			str_tmp << "K:\\NINJA\\E71a\\ECC" << eccnum;
+		}
+		else {
+			str_tmp << "I:\\NINJA\\E71a\\ECC" << eccnum;
+		}
+		ECC_Area = str_tmp.str();
+	}
+
+	Origin << ECC_Area << "\\Area" << k.area << "\\PL" << std::setw(3) << std::setfill('0') << trk.Plate << "\\b" << std::setw(3) << std::setfill('0') << trk.Plate << ".sel.cor.vxx";
+
+	double d = 50000;//um : Search_basetrackと同じ探索範囲
+	vxx::BvxxReader br;
+	std::vector<vxx::base_track_t> base = br.ReadAll(Origin.str(), pl, k.area);//pl,pos
+
+	bool found = false;
+	for (auto& b : base) {
+		double dx = b.x - k.x;
+		double dy = b.y - k.y;
+		if (std::abs(dx) > d || std::abs(dy) > d) continue;
+		double dist = std::sqrt(dx * dx + dy * dy);
+		if (!found || dist < bestDist) {
+			best = b;
+			bestDist = dist;
+			found = true;
+		}
+	}
+	return found;
 }
 void Search_basetrack(std::string ECC_path, int pl, std::string cm_path, Key k, int64_t m[2], TrackEntry& trk, int eccnum, int mode) {
 	std::stringstream Origin, str_tmp;
@@ -314,6 +432,8 @@ void Search_basetrack(std::string ECC_path, int pl, std::string cm_path, Key k, 
 			trk.TrackAy = b.ay;
 			trk.TrackX = b.x;
 			trk.TrackY = b.y;
+			trk.SmallAreaPh = b.m[0].ph % 10000 + b.m[1].ph % 10000;
+			trk.Mapped = true;
 			flg = 1;
 		}
 	}

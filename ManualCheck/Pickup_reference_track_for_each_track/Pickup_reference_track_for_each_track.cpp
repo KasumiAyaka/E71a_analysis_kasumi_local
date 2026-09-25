@@ -45,7 +45,9 @@ struct OutputBlock {
 	std::string mapText;
 };
 std::vector<TrackEntry> Read_yaml(const std::string& filename);
-void Search_ref_btrk(std::string filename, int pl, std::ostream& ofs, int ecc, int zone, TrackEntry& trk);
+// refSelectMode: 0 = 候補からランダムに1つ選ぶ(従来通り), 1 = basetrackを構成するmicrotrackのVPHの和(m[0].ph%10000+m[1].ph%10000)が最も大きいものを選ぶ
+// zoneMismatchLog: 見つかったReference trackのzoneが実在/外挿トラック側のzoneと異なっていた場合に[PL,event]を記録する
+void Search_ref_btrk(std::string filename, int pl, std::ostream& ofs, int ecc, int zone, TrackEntry& trk, int refSelectMode, std::vector<std::pair<int, int>>& zoneMismatchLog);
 static std::string trim(const std::string& s);
 std::string InsertRefFolder(const std::string& saveTo);
 int ExtractEventNumber(const std::string& saveTo);
@@ -56,13 +58,15 @@ void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry
 int main(int argc, char** argv) {
 	if (argc < 3) {
 		//fprintf(stderr, "usage : prg_name [input m-file-bin] groupnum gmin gmax [output m-file-bin]\n");
-		fprintf(stderr, "usage : prg_name #ECC [in-YAML-file-path] [output_dir_path] [aera,Basetracklist]\n");
+		fprintf(stderr, "usage : prg_name #ECC [in-YAML-file-path] [output_dir_path] [aera,Basetracklist] [refSelectMode(0=random,1=maxVPH)]\n");
 		exit(1);
 	}
 	int eccnum = std::stoi(argv[1]);
 	std::string in_dir_path = argv[2];
 	std::string out_dir_path = argv[3];
 	std::string output_log = argv[4];
+	int refSelectMode = 0; // 0: ランダムに1つ選ぶ(既定), 1: VPHの和が最大のものを選ぶ
+	if (argc >= 6) refSelectMode = std::stoi(argv[5]);
 
 	// ECC path
 	std::stringstream file_in_ECC;
@@ -97,6 +101,8 @@ int main(int argc, char** argv) {
 
 	//
 	std::vector<std::pair<int,int>> errlog;
+	// 実在/外挿トラックとそれに対して見つかったReference trackのzoneが異なっていた場合の[PL,event]記録
+	std::vector<std::pair<int,int>> zoneMismatchLog;
 
 
 	std::ofstream ofs_log(output_log);
@@ -152,7 +158,7 @@ int main(int argc, char** argv) {
 					blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str(), mapSs.str() });
 					continue;
 				}
-				Search_ref_btrk(file_in_base.str(), pl, yamlSs, eccnum, itr->Zone, *itr);
+				Search_ref_btrk(file_in_base.str(), pl, yamlSs, eccnum, itr->Zone, *itr, refSelectMode, zoneMismatchLog);
 				logSs << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << itr->RawID << " " << -1 << std::endl;
 
 			}
@@ -166,8 +172,6 @@ int main(int argc, char** argv) {
 				// real track
 				yamlSs << "  - Plate: " << itr->Plate << std::endl;
 				yamlSs << "    RawID: " << itr->RawID << std::endl;
-				yamlSs << "    Surface: Both" << std::endl;
-				yamlSs << "    SaveTo: " << itr->SaveTo << std::endl;
 				int tmp = itr->RawID;
 				// matching real track
 				std::stringstream file_in_base,file_in_cm;
@@ -175,10 +179,18 @@ int main(int argc, char** argv) {
 				file_in_cm << file_in_ECC.str() << "\\Area0\\0\\align\\corrmap-abs.lst";
 				if (!std::filesystem::exists(file_in_base.str())) {
 					std::cout << file_in_base.str() << " doesn't exist." << std::endl;
+					yamlSs << "    Surface: Both" << std::endl;
+					yamlSs << "    SaveTo: " << itr->SaveTo << std::endl;
 					blocks.push_back({ itr->Zone, yamlSs.str(), logSs.str(), mapSs.str() });
 					continue;
 				}
 				Large_area2Small_area(file_in_ECC.str(), file_in_cm.str(), *itr, eccnum);
+				// 実在トラックの小エリア側RawID/Track/Zone(マッピング後の値)をコメントとして出力する
+				yamlSs << "    #RawID: " << itr->RawID << std::endl;
+				yamlSs << "    #Track: [" << itr->TrackAx << "," << itr->TrackAy << "," << itr->TrackX << "," << itr->TrackY << "]" << std::endl;
+				yamlSs << "    #Zone: " << itr->Zone << std::endl;
+				yamlSs << "    Surface: Both" << std::endl;
+				yamlSs << "    SaveTo: " << itr->SaveTo << std::endl;
 				logSs << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << tmp << " " << itr->RawID << std::endl;// area,eventid,rawid,original rawid
 				if (itr->RawID == 10) {
 					errlog.push_back(std::make_pair(pl,tmp));
@@ -195,7 +207,7 @@ int main(int argc, char** argv) {
 						<< " " << itr->MergedAx << " " << itr->MergedAy << " " << itr->MergedX << " " << itr->MergedY << " " << -10 << std::endl;
 				}
 																															 // search reference track
-				Search_ref_btrk(file_in_base.str(), pl, yamlSs, eccnum, itr->Zone, *itr);
+				Search_ref_btrk(file_in_base.str(), pl, yamlSs, eccnum, itr->Zone, *itr, refSelectMode, zoneMismatchLog);
 				logSs << itr->Zone << " " << ExtractEventNumber(itr->SaveTo) << " " << itr->RawID << " " << -1 << std::endl;
 
 				//printf("input file  [%s]\n", file_in_base.str().c_str());
@@ -219,6 +231,14 @@ int main(int argc, char** argv) {
 		std::cout << "\n\n ERRORs:Cannot find this basetrack in a small area" << std::endl;
 		std::cout << "PL , rawid(merged) = " << std::endl;
 		for (auto itr = errlog.begin(); itr != errlog.end(); itr++) {
+			std::cout << itr->first << ", " << itr->second << std::endl;
+		}
+	}
+
+	if (zoneMismatchLog.size() > 0) {
+		std::cout << "\n\n WARNINGs: Reference track zone differs from Real/Prediction track zone" << std::endl;
+		std::cout << "PL , event = " << std::endl;
+		for (auto itr = zoneMismatchLog.begin(); itr != zoneMismatchLog.end(); itr++) {
 			std::cout << itr->first << ", " << itr->second << std::endl;
 		}
 	}
@@ -260,6 +280,18 @@ void CheckArea(double x, double y,Key& ret) {
 		}
 	}
 }
+// 見つかった小エリア側basetrackの位置(trk.TrackX,trk.TrackY)が、
+// 目標位置(k.x,k.y)からSearch_ref_btrkの初期探索半径(d=1000um)±500um以内にあるかを確認する。
+static void CheckMatchDistance(const TrackEntry& trk, const Key& k) {
+	double dist = std::sqrt(std::pow(trk.TrackX - k.x, 2) + std::pow(trk.TrackY - k.y, 2));
+	const double refD = 1000; // Search_ref_btrkの初期d(um)と同じ基準値
+	const double tolerance = 500;
+	if (dist > refD + tolerance) {
+		std::cout << "\t[WARN] matched basetrack (rawid=" << trk.RawID << ") is far from target position: dist="
+			<< dist << "um (target: d=" << refD << "+-" << tolerance << "um)" << std::endl;
+	}
+}
+
 void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry& trk, int eccnum) {
 	std::stringstream Marged;
 	Marged << ECC_path << "\\Area0\\PL" << std::setw(3) << std::setfill('0') << trk.Plate << "\\b" << std::setw(3) << std::setfill('0') << trk.Plate << ".sel.cor.vxx";
@@ -302,6 +334,9 @@ void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry
 			if (trk.TrackAx != 0 || trk.TrackAy != 0) 	break;
 		}
 	}
+	if (trk.TrackAx != 0 || trk.TrackAy != 0) {
+		CheckMatchDistance(trk, k);
+	}
 	if (trk.TrackAx == 0 && trk.TrackAy == 0) {
 		std::cout << "\tBasetrack " << trk.RawID << "was not found in small area.\n\n" << std::endl;
 
@@ -336,6 +371,7 @@ void Large_area2Small_area(std::string ECC_path, std::string cm_path, TrackEntry
 			trk.TrackY = nearest.y;
 			trk.SmallAreaPh = nearest.m[0].ph % 10000 + nearest.m[1].ph % 10000;
 			trk.Mapped = true;
+			CheckMatchDistance(trk, k);
 		}
 		else {
 			std::cout << "\tNearest basetrack search also failed.\n\n" << std::endl;
@@ -499,7 +535,7 @@ std::vector<TrackEntry> Read_yaml(const std::string& filename) {
 	}
 	return entries;
 }
-void Search_ref_btrk(std::string filename, int pl, std::ostream& ofs, int ecc, int zone, TrackEntry& trk) {
+void Search_ref_btrk(std::string filename, int pl, std::ostream& ofs, int ecc, int zone, TrackEntry& trk, int refSelectMode, std::vector<std::pair<int, int>>& zoneMismatchLog) {
 
 	double d = 1000;//um
 	//3. オプションを与えたい場合。
@@ -539,19 +575,43 @@ void Search_ref_btrk(std::string filename, int pl, std::ostream& ofs, int ecc, i
 		}
 	} while (refnum == 0);
 
-	// 3. 乱数エンジンを用意してシャッフル
-	std::random_device seed;
-	std::mt19937 engine(seed());
-	std::shuffle(base_sel.begin(), base_sel.end(), engine);
+	// 3. 候補から1つ選ぶ
+	vxx::base_track_t chosen;
+	if (refSelectMode == 1) {
+		// basetrackを構成するmicrotrackのVPHの和(m[0].ph%10000+m[1].ph%10000)が最も大きいものを選ぶ
+		long long bestVph = -1;
+		for (auto& b : base_sel) {
+			long long vph = (long long)(b.m[0].ph % 10000) + (long long)(b.m[1].ph % 10000);
+			if (vph > bestVph) {
+				bestVph = vph;
+				chosen = b;
+			}
+		}
+	}
+	else {
+		// 乱数エンジンを用意してシャッフルし、先頭の1つを取り出す(従来通り)
+		std::random_device seed;
+		std::mt19937 engine(seed());
+		std::shuffle(base_sel.begin(), base_sel.end(), engine);
+		chosen = base_sel[0];
+	}
 
-	// 4. 先頭の1つを出力（取り出し）
+	// 実在/外挿トラックのzone(引数zone)と、見つかったReference trackのzone(chosen.zone)が
+	// 一致するかを確認し、異なっていればプログラム最後にまとめて出力するために記録する
+	if (chosen.zone != zone) {
+		std::cout << "\t[WARN] reference track zone(" << chosen.zone << ") differs from target zone(" << zone << ")" << std::endl;
+		zoneMismatchLog.push_back(std::make_pair(pl, ExtractEventNumber(trk.SaveTo)));
+	}
+
+	// 4. 選んだ1つを出力
 	ofs << "  - Plate: " << pl << std::endl;
-	ofs << "    RawID: " << base_sel[0].rawid << std::endl;
+	ofs << "    RawID: " << chosen.rawid << std::endl;
+	ofs << "    #Track: [" << chosen.ax << "," << chosen.ay << "," << chosen.x << "," << chosen.y << "]" << std::endl;
 	ofs << "    Zone: " << zone << std::endl;
 	ofs << "    Surface: Both" << std::endl;
 	ofs << "    SaveTo: " << InsertRefFolder(trk.SaveTo) << std::endl;
 
-	trk.RawID = base_sel[0].rawid;
+	trk.RawID = chosen.rawid;
 	trk.Zone = zone;
 
 }
