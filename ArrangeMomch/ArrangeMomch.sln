@@ -99,6 +99,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Add_BMflg_to_momch", "Add_B
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pickup_selected_event_from_momch", "Pickup_selected_event_from_momch\Pickup_selected_event_from_momch.vcxproj", "{864D2938-E323-4333-903F-7A34F0B431BC}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Check_BMmom_timestamp_and_base_consistency", "Check_BMmom_timestamp_and_base_consistency\Check_BMmom_timestamp_and_base_consistency.vcxproj", "{E9A52FED-BCA2-437D-8D5C-A84EF0D431EC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -491,6 +493,14 @@ Global
 		{864D2938-E323-4333-903F-7A34F0B431BC}.Release|x64.Build.0 = Release|x64
 		{864D2938-E323-4333-903F-7A34F0B431BC}.Release|x86.ActiveCfg = Release|Win32
 		{864D2938-E323-4333-903F-7A34F0B431BC}.Release|x86.Build.0 = Release|Win32
+		{E9A52FED-BCA2-437D-8D5C-A84EF0D431EC}.Debug|x64.ActiveCfg = Debug|x64
+		{E9A52FED-BCA2-437D-8D5C-A84EF0D431EC}.Debug|x64.Build.0 = Debug|x64
+		{E9A52FED-BCA2-437D-8D5C-A84EF0D431EC}.Debug|x86.ActiveCfg = Debug|Win32
+		{E9A52FED-BCA2-437D-8D5C-A84EF0D431EC}.Debug|x86.Build.0 = Debug|Win32
+		{E9A52FED-BCA2-437D-8D5C-A84EF0D431EC}.Release|x64.ActiveCfg = Release|x64
+		{E9A52FED-BCA2-437D-8D5C-A84EF0D431EC}.Release|x64.Build.0 = Release|x64
+		{E9A52FED-BCA2-437D-8D5C-A84EF0D431EC}.Release|x86.ActiveCfg = Release|Win32
+		{E9A52FED-BCA2-437D-8D5C-A84EF0D431EC}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
