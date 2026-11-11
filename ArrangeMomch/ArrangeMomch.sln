@@ -101,6 +101,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pickup_selected_event_from_
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Check_BMmom_timestamp_and_base_consistency", "Check_BMmom_timestamp_and_base_consistency\Check_BMmom_timestamp_and_base_consistency.vcxproj", "{E9A52FED-BCA2-437D-8D5C-A84EF0D431EC}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Dump_basetrack_for_groupids", "Dump_basetrack_for_groupids\Dump_basetrack_for_groupids.vcxproj", "{A40733DE-2789-4551-A150-D783D8F6045C}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Output_rejected _tracks", "Output_rejected _tracks\Output_rejected _tracks.vcxproj", "{E54D8BCC-6100-4D87-91F3-1B73AB43A36A}"
 EndProject
 Global
@@ -503,6 +505,14 @@ Global
 		{E9A52FED-BCA2-437D-8D5C-A84EF0D431EC}.Release|x64.Build.0 = Release|x64
 		{E9A52FED-BCA2-437D-8D5C-A84EF0D431EC}.Release|x86.ActiveCfg = Release|Win32
 		{E9A52FED-BCA2-437D-8D5C-A84EF0D431EC}.Release|x86.Build.0 = Release|Win32
+		{A40733DE-2789-4551-A150-D783D8F6045C}.Debug|x64.ActiveCfg = Debug|x64
+		{A40733DE-2789-4551-A150-D783D8F6045C}.Debug|x64.Build.0 = Debug|x64
+		{A40733DE-2789-4551-A150-D783D8F6045C}.Debug|x86.ActiveCfg = Debug|Win32
+		{A40733DE-2789-4551-A150-D783D8F6045C}.Debug|x86.Build.0 = Debug|Win32
+		{A40733DE-2789-4551-A150-D783D8F6045C}.Release|x64.ActiveCfg = Release|x64
+		{A40733DE-2789-4551-A150-D783D8F6045C}.Release|x64.Build.0 = Release|x64
+		{A40733DE-2789-4551-A150-D783D8F6045C}.Release|x86.ActiveCfg = Release|Win32
+		{A40733DE-2789-4551-A150-D783D8F6045C}.Release|x86.Build.0 = Release|Win32
 		{E54D8BCC-6100-4D87-91F3-1B73AB43A36A}.Debug|x64.ActiveCfg = Debug|x64
 		{E54D8BCC-6100-4D87-91F3-1B73AB43A36A}.Debug|x64.Build.0 = Debug|x64
 		{E54D8BCC-6100-4D87-91F3-1B73AB43A36A}.Debug|x86.ActiveCfg = Debug|Win32
