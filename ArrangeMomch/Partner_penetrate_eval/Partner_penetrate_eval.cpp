@@ -409,7 +409,8 @@ std::vector<corrmap_3d::align_param2>* get_alignmap(int pl0, int pl1) {
 // exists for this (pl0,pl1) plate pair.
 bool junction_local_quantities(int pb_pl, double pb_x, double pb_y, double pb_z, double pb_ax, double pb_ay,
 	int cb_pl, double cb_x, double cb_y, double cb_z, double cb_ax, double cb_ay,
-	double& dal, double& lat_pos, double& pc_md) {
+	double refz, double zr_window[2],
+	double& dal, double& dar_out, double& lat_pos, double& rad_pos_out, double& pc_md) {
 	bool partner_is_near = pb_pl <= cb_pl;
 	int pl0 = partner_is_near ? pb_pl : cb_pl;
 	int pl1 = partner_is_near ? cb_pl : pb_pl;
@@ -440,21 +441,43 @@ bool junction_local_quantities(int pb_pl, double pb_x, double pb_y, double pb_z,
 	double near_ax = partner_is_near ? pb_ax : cb_ax, near_ay = partner_is_near ? pb_ay : cb_ay;
 
 	double near_ax2 = near_ax, near_ay2 = near_ay, far_ax2 = (double)far_pt.ax, far_ay2 = (double)far_pt.ay;
-	double dar;
-	lateral_radial_diff(near_ax2, near_ay2, far_ax2, far_ay2, dal, dar);
+	lateral_radial_diff(near_ax2, near_ay2, far_ax2, far_ay2, dal, dar_out);
 
+	// position residual after extrapolating near's own trajectory by the
+	// real z-gap to far's z: predicted_dx/dy = near_ax*dz, near_ay*dz, where
+	// dz = far.z - near.z. Subtracting this off before the lateral/radial
+	// decomposition is required for the radial component -- see the
+	// 2026-11-12 within-chain self-check (mean(dar)=-0.011, essentially
+	// unbiased, vs mean(rad_pos)=-4590um on raw (dx,dy) for genuinely
+	// continuous same-chain linklets): un-scaled (dx,dy) is dominated by
+	// dz*angle (always negative here, since z decreases with increasing pl
+	// and far always has the larger pl), not real trajectory deviation.
+	// The lateral component is unaffected by this correction (the removed
+	// term is purely radial by construction), confirmed algebraically and
+	// empirically (lateral_pos_diff showed no such bias).
 	double dx = far_pt.x - near_x, dy = far_pt.y - near_y;
-	double rad_pos;
-	lateral_radial_diff(near_ax2, near_ay2, near_ax2 + dx, near_ay2 + dy, lat_pos, rad_pos);
+	double dz_real = far_pt.z - near_z;
+	double pred_dx = near_ax2 * dz_real, pred_dy = near_ay2 * dz_real;
+	double resid_dx = dx - pred_dx, resid_dy = dy - pred_dy;
+	lateral_radial_diff(near_ax2, near_ay2, near_ax2 + resid_dx, near_ay2 + resid_dy, lat_pos, rad_pos_out);
 
+	// minimum_distance_fixed(), not the raw matrix_3D::minimum_distance(): the
+	// raw 3D skew-line formula is numerically unstable for near-parallel
+	// directions (the common case for a genuine same-track junction, where
+	// dal/dar are small by construction) -- its denominator (|dir0|^2|dir1|^2
+	// - (dir0.dir1)^2) goes to ~0, so float noise in dal/dar gets amplified
+	// into a huge, physically meaningless extrapolation distance even when
+	// the true perpendicular separation (~lat_pos) is tiny. refz/zr_window
+	// clamp the extrapolation to the same vertex-centered window already
+	// used for partner_md/cand_md/pc_md elsewhere in this file.
 	matrix_3D::vector_3D pos0, pos1, dir0, dir1;
 	pos0.x = near_x; pos0.y = near_y; pos0.z = near_z;
 	dir0.x = near_ax2; dir0.y = near_ay2; dir0.z = 1;
 	pos1.x = far_pt.x; pos1.y = far_pt.y; pos1.z = far_pt.z;
 	dir1.x = far_pt.ax; dir1.y = far_pt.ay; dir1.z = 1;
-	double z_range[2] = { pos0.z, pos1.z };
+	double zr[2] = { zr_window[0], zr_window[1] };
 	double extra[2];
-	pc_md = matrix_3D::minimum_distance(pos0, pos1, dir0, dir1, z_range, extra);
+	pc_md = minimum_distance_fixed(pos0, pos1, dir0, dir1, zr, extra, refz);
 	return true;
 }
 
@@ -629,14 +652,30 @@ int main(int argc, char** argv) {
 	std::ofstream ofs_radlat(stem + "_self_radlat.txt");
 	std::ofstream ofs_vph(stem + "_self_vph.txt");
 	std::ofstream ofs_scale(stem + "_chain_scale.txt");
+	// ONE-OFF diagnostic (2026-11-12): for each partner chain's own internal
+	// consecutive basetrack pairs (same chain, no vertex crossing), the raw
+	// dal/dar/lat_pos/rad_pos via the exact same lateral_radial_diff() calls
+	// used for the cross-chain junction -- tests whether the systematic
+	// negative skew seen in radial_pos_diff at the partner-candidate junction
+	// is a sign/convention artifact of the formula itself, or specific to
+	// the junction construction. groupid chainid pl0 pl1 dal dar lat_pos rad_pos
+	std::ofstream ofs_selfradial(stem + "_selfradial.txt");
 	// groupid chainid cand_idx  p_pl p_x p_y p_z p_ax p_ay  cand_pl cand_x
 	// cand_y cand_z cand_ax cand_ay  pc_md -- raw inputs to the pc_md
 	// minimum_distance_fixed() call, one row per partner x candidate pair,
 	// for manual sanity-checking of the md calculation.
 	std::ofstream ofs_mddebug(stem + "_md_debug.txt");
 	// groupid chainid cand_idx cand_chainid wp_tag valid  p_pl cand_pl
-	// pl_diff  dal_boundary lateral_pos_diff  pc_md_boundary  p_vph_mean_chain
-	// cand_vph_mean_chain vph_mean_diff
+	// pl_diff  dal_boundary dar_boundary lateral_pos_diff radial_pos_diff
+	// pc_md_boundary  p_vph_mean_chain cand_vph_mean_chain vph_mean_diff
+	// partner_mcsmom cand_nseg cand_npl (20 columns, 0-indexed 0..19).
+	// partner_mcsmom is the partner's own MCS momentum (ecc_mcs_mom[muon or
+	// proton idx]), used to test whether lower-momentum partners show larger
+	// MCS-driven scattering at the junction (Highland: theta_MCS ~ 1/p).
+	// cand_nseg is the candidate chain's own nseg field (number of
+	// basetracks); cand_npl is (max pl - min pl + 1) spanned by those
+	// basetracks -- fillfactor = cand_nseg / cand_npl measures how complete
+	// (gap-free) the candidate's own reconstruction is.
 	// -- the topology-aware partner-candidate junction: partner's point is
 	// whichever end of the partner chain is closest to vertex_pl (largest
 	// pl<=vertex_pl if it has one, else smallest pl overall); candidate's
@@ -693,6 +732,26 @@ int main(int argc, char** argv) {
 		extract_chain_info(partner_mc, p_pl_list, p_vph_list, p_ax_list, p_ay_list);
 		double partner_vph_slope = vph_slope_vs_vertex_dist(p_pl_list, p_vph_list, ev.vertex_pl);
 		double partner_linklet_std = linklet_angle_stddev(p_pl_list, p_ax_list, p_ay_list);
+
+		{
+			std::vector<Momentum_recon::Mom_basetrack> sorted_base = partner_mc.base;
+			std::sort(sorted_base.begin(), sorted_base.end(), [](const Momentum_recon::Mom_basetrack& a, const Momentum_recon::Mom_basetrack& b) { return a.pl < b.pl; });
+			for (size_t k = 0; k + 1 < sorted_base.size(); k++) {
+				Momentum_recon::Mom_basetrack& b0 = sorted_base[k];
+				Momentum_recon::Mom_basetrack& b1 = sorted_base[k + 1];
+				double dal_s, dar_s;
+				lateral_radial_diff((double)b0.ax, (double)b0.ay, (double)b1.ax, (double)b1.ay, dal_s, dar_s);
+				double dx_s = (double)b1.x - (double)b0.x, dy_s = (double)b1.y - (double)b0.y;
+				double dz_s = (double)b1.z - (double)b0.z;
+				double pred_dx_s = (double)b0.ax * dz_s, pred_dy_s = (double)b0.ay * dz_s;
+				double resid_dx_s = dx_s - pred_dx_s, resid_dy_s = dy_s - pred_dy_s;
+				double lat_s, rad_s;
+				lateral_radial_diff((double)b0.ax, (double)b0.ay, (double)b0.ax + resid_dx_s, (double)b0.ay + resid_dy_s, lat_s, rad_s);
+				ofs_selfradial << groupid << " " << chainid << " " << b0.pl << " " << b1.pl << " "
+					<< std::fixed << std::setprecision(5) << dal_s << " " << dar_s << " "
+					<< std::setprecision(2) << lat_s << " " << rad_s << std::endl;
+			}
+		}
 
 		double rms_l, rms_r;
 		chain_linklet_lateral_radial_rms(p_pl_list, p_ax_list, p_ay_list, rms_l, rms_r);
@@ -790,13 +849,22 @@ int main(int argc, char** argv) {
 					auto bmi = rawid_index.find(PlRaw{ cand_pl, (int64_t)nb->rawid });
 					if (bmi != rawid_index.end()) b_cand_chainid = bmi->second->chainid;
 				}
+				int cand_npl = 0;
+				if (!c_pl_list.empty()) {
+					int plmin = c_pl_list[0], plmax = c_pl_list[0];
+					for (size_t k = 0; k < c_pl_list.size(); k++) { if (c_pl_list[k] < plmin) plmin = c_pl_list[k]; if (c_pl_list[k] > plmax) plmax = c_pl_list[k]; }
+					cand_npl = plmax - plmin + 1;
+				}
+				int cand_nseg = cand.nseg;
+
 				if (!cb_found) {
 					n_boundary_invalid++;
 					ofs_boundary << groupid << " " << chainid << " " << (int)(ci - 2) << " " << b_cand_chainid << " "
 						<< wp_tag << " " << 0 << " "
 						<< pb_pl << " " << -1 << " " << -1 << " "
-						<< -1 << " " << -1 << " " << -1 << " "
-						<< std::fixed << std::setprecision(2) << p_vph_mean << " " << -1 << " " << -1 << std::endl;
+						<< -1 << " " << -1 << " " << -1 << " " << -1 << " " << -1 << " "
+						<< std::fixed << std::setprecision(2) << p_vph_mean << " " << -1 << " " << -1 << " "
+						<< std::setprecision(1) << partner_mcsmom << " " << cand_nseg << " " << cand_npl << std::endl;
 				}
 				else {
 					int pl_diff = cb_pl - pb_pl;
@@ -804,16 +872,17 @@ int main(int argc, char** argv) {
 					// local/linklet-frame junction quantities (see
 					// junction_local_quantities header comment above) --
 					// replaces the earlier raw-mfile-frame dal/lat_pos/md.
-					double dal_b, lat_pos_b, pcb_md;
+					double dal_b, dar_b, lat_pos_b, rad_pos_b, pcb_md;
 					bool jl_ok = junction_local_quantities(pb_pl, pb_x, pb_y, pb_z, pb_ax, pb_ay,
-						cb_pl, cb_x, cb_y, cb_z, cb_ax, cb_ay, dal_b, lat_pos_b, pcb_md);
+						cb_pl, cb_x, cb_y, cb_z, cb_ax, cb_ay, mu_z, zrange, dal_b, dar_b, lat_pos_b, rad_pos_b, pcb_md);
 					if (!jl_ok) {
 						n_boundary_invalid++;
 						ofs_boundary << groupid << " " << chainid << " " << (int)(ci - 2) << " " << b_cand_chainid << " "
 							<< wp_tag << " " << 0 << " "
 							<< pb_pl << " " << cb_pl << " " << pl_diff << " "
-							<< -1 << " " << -1 << " " << -1 << " "
-							<< std::fixed << std::setprecision(2) << p_vph_mean << " " << -1 << " " << -1 << std::endl;
+							<< -1 << " " << -1 << " " << -1 << " " << -1 << " " << -1 << " "
+							<< std::fixed << std::setprecision(2) << p_vph_mean << " " << -1 << " " << -1 << " "
+							<< std::setprecision(1) << partner_mcsmom << " " << cand_nseg << " " << cand_npl << std::endl;
 					}
 					else {
 						n_boundary_valid++;
@@ -824,8 +893,10 @@ int main(int argc, char** argv) {
 						ofs_boundary << groupid << " " << chainid << " " << (int)(ci - 2) << " " << b_cand_chainid << " "
 							<< wp_tag << " " << 1 << " "
 							<< pb_pl << " " << cb_pl << " " << pl_diff << " "
-							<< std::fixed << std::setprecision(5) << dal_b << " " << std::setprecision(2) << lat_pos_b << " " << pcb_md << " "
-							<< std::setprecision(2) << p_vph_mean << " " << cb_vph_mean << " " << vph_mean_diff << std::endl;
+							<< std::fixed << std::setprecision(5) << dal_b << " " << dar_b << " "
+							<< std::setprecision(2) << lat_pos_b << " " << rad_pos_b << " " << pcb_md << " "
+							<< std::setprecision(2) << p_vph_mean << " " << cb_vph_mean << " " << vph_mean_diff << " "
+							<< std::setprecision(1) << partner_mcsmom << " " << cand_nseg << " " << cand_npl << std::endl;
 					}
 				}
 			}
